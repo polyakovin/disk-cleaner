@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+build/
+.DS_Store
+*.xcuserstate
+.env
+.env.*
+*.pem
+*.key
+credentials*.json
+__pycache__/

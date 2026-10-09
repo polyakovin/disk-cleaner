@@ -49,3 +49,12 @@ python3 scripts/commercial-project.py check .
 After `money: go`, define the smallest product change that removes a repeated
 bottleneck from a paid manual delivery. Preserve the commercial evidence and
 gate decisions in the implementation brief.
+
+## Imported DiskLens application
+
+- `DiskLens/` is the existing native macOS 14+ app, imported from an earlier chat; `DiskLens/AGENTS.md` defines its architecture and safety constraints.
+- Swift 5.9+ and Xcode Command Line Tools or Xcode are required. No external Swift packages.
+- Canonical checks: `python3 scripts/commercial-project.py check .`, `swift test --package-path DiskLens`, then `swift build --package-path DiskLens -c release`.
+- Package with `bash DiskLens/scripts/build-app.sh "$PWD/build"` using an empty output directory. Verify the packaged app on macOS; ad-hoc signing does not establish Developer ID/notarization or Intel runtime validation.
+- `skills/disk-space-report/` is the related portable diagnostic skill. Keep build artifacts and private scan reports out of Git.
+- `docs/CONTEXT.md` preserves the imported chat context and validation limits. Importing existing assets does not advance commercial gates or authorize full product implementation.

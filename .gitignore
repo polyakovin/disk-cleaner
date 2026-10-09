@@ -55,3 +55,11 @@ _файлы/
 .playwright-mcp/
 .DS_Store
 # END Projects Control Panel Git safety
+
+# DiskLens build artifacts and local scan reports
+build/
+DiskLens/.build/
+DiskLens/.swiftpm/
+__pycache__/
+*.xcuserstate
+disklens-real-report.json
