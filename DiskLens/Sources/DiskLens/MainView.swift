@@ -230,7 +230,8 @@ struct MainView: View {
                         Text(entry.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
                         if model.pane != .overview { Text(URL(fileURLWithPath: entry.path).deletingLastPathComponent().path).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) }
                     }
-                }.padding(.vertical, 6).contentShape(Rectangle()).onTapGesture(count: 2) { model.navigate(entry); if entry.isFolder { model.pane = .overview } }
+                }.padding(.vertical, 6).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                    .onTapGesture(count: entry.isFolder ? 1 : 2) { model.navigate(entry); if entry.isFolder { model.pane = .overview } }
             }.width(min: 230, ideal: 350)
             TableColumn("Размер") { entry in Text(SizeFormat.string(entry.allocatedBytes)).monospacedDigit().fontWeight(.medium) }.width(100)
             TableColumn("Доля") { entry in
