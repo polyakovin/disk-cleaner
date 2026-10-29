@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DiskLens для macOS: найдите крупные файлы и папки, посмотрите, что занимает диск, и запросите рекомендации ИИ. Скачать предварительную версию 0.1.0.">
+  <meta name="theme-color" content="#f7f8f4">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:title" content="DiskLens. Место под контролем.">
+  <meta property="og:description" content="Узнайте, что занимает диск вашего Mac. Нативное приложение для macOS 14+, Apple Silicon и Intel.">
+  <meta property="og:url" content="https://polyakovin.github.io/disk-cleaner/">
+  <link rel="canonical" href="https://polyakovin.github.io/disk-cleaner/">
+  <link rel="icon" href="./assets/disklens.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>DiskLens. Место под контролем.</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9H3Z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6Zm8 0v5h4M9 12h6m-6 4h6"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.7 6.3L21 12l-6.3 2.7L12 21l-2.7-6.3L3 12l6.3-2.7ZM20 2v4m-2-2h4"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Zm-4 9 3 3 5-6"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M11 3a9 9 0 1 0 10 10H11Zm4 0v6h6a8 8 0 0 0-6-6Z"/></symbol>
+    <symbol id="i-drive" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 13h18m-5 3h2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </svg>
+
+  <header class="header wrap">
+    <a class="brand" href="./" aria-label="DiskLens, на главную">
+      <img src="./assets/disklens.svg" width="38" height="38" alt="">
+      <span>DiskLens</span>
+    </a>
+    <nav class="nav" aria-label="Основная навигация">
+      <a href="#features">Возможности</a>
+      <a href="#install">Установка</a>
+      <a class="github-link" href="https://github.com/polyakovin/disk-cleaner">GitHub <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+    </nav>
+    <a class="header-download" href="#download">Скачать <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"/></svg></a>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <a class="release-pill" href="https://github.com/polyakovin/disk-cleaner/releases/tag/v0.1.0"><span class="status-dot"></span> Для вашего Mac <span class="pill-divider"></span> v0.1.0 <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+      <h1 id="hero-title">Место на диске.<br><span>Всё по полочкам.</span></h1>
+      <p class="hero-description">Найдите тяжёлые папки, загляните в детали<br class="desktop-break"> и поймите, что можно разобрать. С DiskLens для macOS.</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="https://github.com/polyakovin/disk-cleaner/releases/download/v0.1.0/DiskLens-0.1.0-macos-universal.zip"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> Скачать для macOS <span class="button-file">ZIP</span></a>
+        <a class="text-link" href="#preview">Посмотреть ближе <span aria-hidden="true">↓</span></a>
+      </div>
+      <p class="compatibility">macOS 14+ <span>·</span> Apple Silicon и Intel <span>·</span> <a href="#install">Предварительная версия</a></p>
+    </section>
+
+    <figure class="preview wrap" id="preview" aria-labelledby="preview-caption">
+      <div class="preview-glow" aria-hidden="true"></div>
+      <div class="app-window" role="img" aria-label="Пример отчёта DiskLens: обзор домашней папки с размерами проектов, видео, приложений и библиотеки. Все числа иллюстративные.">
+        <aside class="app-sidebar" aria-hidden="true">
+          <div class="window-controls"><i></i><i></i><i></i></div>
+          <div class="app-brand"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-drive"/></svg><div>DiskLens<small>Место под контролем</small></div></div>
+          <div class="app-menu">
+            <div class="app-menu-active"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg> Обзор</div>
+            <div><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-file"/></svg> Крупные файлы</div>
+            <div><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg> Кандидаты</div>
+            <div><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-spark"/></svg> ИИ-помощник</div>
+          </div>
+          <div class="disk-status"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-drive"/></svg> Macintosh HD<strong>69,6 <span>ГБ</span></strong><small>свободно на томе</small><div class="disk-status-track"><span></span></div></div>
+          <div class="app-settings">Подключение ИИ <span>⌘ ,</span></div>
+        </aside>
+        <div class="app-main" aria-hidden="true">
+          <div class="app-toolbar"><div><strong>Обзор</strong><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg> Домашняя папка <span class="chevron">⌄</span></span></div><div class="scan-label">↻ <span>Сканировать</span></div></div>
+          <div class="app-report">
+            <div class="report-heading"><div><span class="report-eyebrow">ВАША ДОМАШНЯЯ ПАПКА</span><div class="report-size">186,4 <span>ГБ</span></div></div><span class="report-done"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-check"/></svg> Замер завершён</span></div>
+            <div class="storage-bar"><span></span><span></span><span></span><span></span></div>
+            <div class="storage-legend"><span><i></i>Проекты</span><span><i></i>Видео</span><span><i></i>Приложения</span><span><i></i>Библиотека</span></div>
+            <div class="table-label"><span>Имя</span><span>Размер ↓</span></div>
+            <div class="file-row"><span class="folder folder-green"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg></span><span>Проекты<small>Рабочие материалы</small></span><div class="file-bar"><span class="bar-projects"></span></div><strong>72,8 <small>ГБ</small></strong><span class="row-chevron">›</span></div>
+            <div class="file-row"><span class="folder folder-purple"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg></span><span>Видео<small>Записи и монтаж</small></span><div class="file-bar"><span class="bar-video"></span></div><strong>48,2 <small>ГБ</small></strong><span class="row-chevron">›</span></div>
+            <div class="file-row"><span class="folder folder-blue"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg></span><span>Приложения<small>Установленные программы</small></span><div class="file-bar"><span class="bar-apps"></span></div><strong>34,6 <small>ГБ</small></strong><span class="row-chevron">›</span></div>
+            <div class="file-row"><span class="folder folder-sand"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg></span><span>Библиотека<small>Данные и кэши приложений</small></span><div class="file-bar"><span class="bar-library"></span></div><strong>30,8 <small>ГБ</small></strong><span class="row-chevron">›</span></div>
+            <div class="report-footer"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg> Только метаданные</span><span>Ничего не удалено</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption id="preview-caption"><span class="caption-line"></span> Иллюстрация интерфейса. Папки и размеры приведены для примера.<span class="caption-line"></span></figcaption>
+    </figure>
+
+    <section class="features wrap section" id="features" aria-labelledby="features-title">
+      <div class="section-heading"><p class="eyebrow">МЕНЬШЕ ДОГАДОК, БОЛЬШЕ ЯСНОСТИ</p><h2 id="features-title">От «что-то занимает место»<br>до конкретной папки.</h2></div>
+      <div class="feature-grid">
+        <article class="feature"><div class="feature-top"><span>01</span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg></div><h3>Увидеть главное</h3><p>Крупные папки и файлы сразу наверху. Сканируйте домашнюю папку, весь Mac или отдельный каталог.</p></article>
+        <article class="feature"><div class="feature-top"><span>02</span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg></div><h3>Заглянуть глубже</h3><p>Открывайте папки одним щелчком, переходите к объектам в Finder. Сохраняйте отчёт в JSON или текст.</p></article>
+        <article class="feature"><div class="feature-top"><span>03</span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-spark"/></svg></div><h3>Спросить ИИ</h3><p>Подключите Codex CLI, локальную команду или API. Просмотрите отчёт и отправьте его на анализ отдельной кнопкой.</p></article>
+      </div>
+    </section>
+
+    <section class="privacy wrap" aria-labelledby="privacy-title">
+      <div class="privacy-visual" aria-hidden="true"><div class="privacy-orbit orbit-one"></div><div class="privacy-orbit orbit-two"></div><div class="privacy-orbit orbit-three"></div><div class="privacy-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg></div><span class="privacy-tag">Локальное сканирование</span></div>
+      <div class="privacy-copy"><p class="eyebrow">СНАЧАЛА РАЗОБРАТЬСЯ</p><h2 id="privacy-title">Ваши файлы.<br>Ваше решение.</h2><p>DiskLens читает размеры и другую информацию о файлах, не открывая их содержимое. Версия 0.1.0 ничего не удаляет.</p><p>Для замера ИИ не нужен. Если вы решите его подключить, отчёт с путями и размерами уйдёт выбранному провайдеру только после вашего действия.</p><a class="text-link" href="https://github.com/polyakovin/disk-cleaner/tree/v0.1.0/DiskLens">Заглянуть в исходники <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></div>
+    </section>
+
+    <section class="install wrap section" id="install" aria-labelledby="install-title">
+      <div class="install-intro"><p class="eyebrow">ПЕРВЫЙ ЗАПУСК</p><h2 id="install-title">Пара шагов.<br>И всё на виду.</h2><p>Нативное приложение для macOS 14 и новее. Один архив для Apple Silicon и Intel.</p><a class="text-link" href="https://github.com/polyakovin/disk-cleaner/releases/tag/v0.1.0">Что входит в v0.1.0 <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></div>
+      <ol class="install-steps">
+        <li><span class="step-number">1</span><div><h3>Скачайте и распакуйте</h3><p>Загрузите ZIP-архив и перенесите DiskLens.app в папку «Программы».</p></div></li>
+        <li><span class="step-number">2</span><div><h3>Откройте приложение</h3><p>Это предварительная сборка с ad-hoc подписью, без Developer ID и notarization. macOS может заблокировать первый запуск.</p><details><summary>Если macOS не даёт открыть приложение</summary><p>Если вы доверяете источнику, после попытки запуска откройте «Системные настройки → Конфиденциальность и безопасность» и разрешите открытие DiskLens. Не отключайте защиту macOS целиком.</p></details></div></li>
+        <li><span class="step-number">3</span><div><h3>Выберите папку и запустите замер</h3><p>Начните с нужного каталога. Системные разрешения macOS определяют, какие объекты доступны приложению.</p></div></li>
+      </ol>
+    </section>
+
+    <section class="faq wrap" aria-labelledby="faq-title">
+      <h2 id="faq-title">Ещё немного деталей</h2>
+      <div class="faq-list">
+        <details><summary>Приложение само очистит диск?</summary><p>В опубликованной версии 0.1.0 удаления нет. DiskLens помогает найти крупные объекты и понять, что стоит проверить. Кандидат на очистку не означает, что папку безопасно удалять целиком.</p></details>
+        <details><summary>Нужно подключать нейросеть?</summary><p>Нет. Сканирование, просмотр размеров, переход в Finder и экспорт работают локально. ИИ нужен только для дополнительных рекомендаций, если вы сами решите их запросить.</p></details>
+        <details><summary>Почему размер может отличаться от Finder?</summary><p>DiskLens считает выделенные блоки. APFS-клоны, снимки, сжатие и недоступные каталоги влияют на результат. Размер папки не равен объёму, который гарантированно освободится после удаления.</p></details>
+        <details><summary>Что проверено в этой сборке?</summary><p>Пройдены тесты и release-сборка, проверены обе архитектуры в пакете и запуск окна на Apple Silicon. Запуск на Intel, Developer ID и notarization не проверены. Подробности и SHA-256 архива доступны в релизе.</p></details>
+      </div>
+    </section>
+
+    <section class="download wrap section" id="download" aria-labelledby="download-title">
+      <div class="download-panel"><img src="./assets/disklens.svg" alt="" width="72" height="72" loading="lazy"><p class="eyebrow">DISKLENS ДЛЯ MACOS</p><h2 id="download-title">Пусть место<br>перестанет быть загадкой.</h2><a class="button button-primary" href="https://github.com/polyakovin/disk-cleaner/releases/download/v0.1.0/DiskLens-0.1.0-macos-universal.zip"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> Скачать DiskLens <span class="button-file">v0.1.0</span></a><p class="download-meta">ZIP · 941 КБ · macOS 14+ · Apple Silicon и Intel</p><p class="download-note">Предварительная сборка с ad-hoc подписью. <a href="#install">О первом запуске</a></p></div>
+    </section>
+  </main>
+
+  <footer class="footer wrap"><a class="brand" href="./"><img src="./assets/disklens.svg" width="28" height="28" alt=""><span>DiskLens</span></a><p>Место под контролем.</p><div><a href="https://github.com/polyakovin/disk-cleaner">GitHub</a><a href="https://github.com/polyakovin/disk-cleaner/releases/tag/v0.1.0">Релиз</a><a href="https://github.com/polyakovin/disk-cleaner/releases/download/v0.1.0/SHA256SUMS.txt">SHA-256</a></div></footer>
+</body>
+</html>

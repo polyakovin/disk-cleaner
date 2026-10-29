@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://polyakovin.github.io/disk-cleaner/sitemap.xml
