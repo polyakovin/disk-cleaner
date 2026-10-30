@@ -2,7 +2,9 @@
 
 Адрес: <https://polyakovin.github.io/disk-cleaner/>.
 
-`site/` содержит статический сайт без сборщика, JavaScript, внешних шрифтов и аналитики. Workflow `.github/workflows/pages.yml` публикует только этот каталог при изменениях сайта в `main`; доступен и ручной запуск. В настройках репозитория источником GitHub Pages должен быть GitHub Actions (`build_type: workflow`).
+`site/` содержит статический сайт без сборщика и внешних шрифтов. Workflow `.github/workflows/pages.yml` публикует только этот каталог при изменениях сайта в `main`; доступен и ручной запуск. В настройках репозитория источником GitHub Pages должен быть GitHub Actions (`build_type: workflow`).
+
+Cloudflare Web Analytics подключена в `site/index.html` перед `</body>` через официальный модуль `beacon.min.js`. Используется существующий счётчик для `polyakovin.github.io`; его идентификатор в HTML публичный и не является API-ключом. В кабинете Cloudflare откройте Web Analytics → `polyakovin.github.io` и отфильтруйте данные по пути `/disk-cleaner/`, чтобы видеть посещения лендинга отдельно от других проектов на этом хосте. Порядок ручного подключения описан в [документации Cloudflare](https://developers.cloudflare.com/web-analytics/get-started/).
 
 Локальный просмотр:
 
