@@ -17,7 +17,7 @@ struct DiskLensApp: App {
         return AppModel()
     }()
     var body: some Scene {
-        Window("DiskLens", id: "main") {
+        Window("Disk Manage", id: "main") {
             MainView(model: model)
                 .frame(minWidth: 980, minHeight: 640)
                 .onDisappear { model.cancelWork() }

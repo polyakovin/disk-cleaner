@@ -609,7 +609,7 @@ final class AppModel: ObservableObject {
     func export(json: Bool) {
         guard let report, !workLocked else { return }
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = json ? "DiskLens-report.json" : "DiskLens-report.txt"
+        panel.nameFieldStringValue = json ? "Disk-Manage-report.json" : "Disk-Manage-report.txt"
         panel.message = "Отчёт содержит пути и размеры, без содержимого файлов"
         if panel.runModal() == .OK, let url = panel.url {
             do { try (json ? report.json() : report.text()).write(to: url, atomically: true, encoding: .utf8) }

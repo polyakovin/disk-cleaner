@@ -1,4 +1,4 @@
-# Decisions — ai-disk-cleaner
+# Decisions — Disk Manage
 
 Append new records. Do not delete or rewrite an earlier decision; supersede it
 with a dated record and explanation.

@@ -17,7 +17,7 @@ mkdir -p "$DISKLENS_OUTPUT_DIR" "$DISKLENS_BUILD_ROOT"
 export CLANG_MODULE_CACHE_PATH="$DISKLENS_BUILD_ROOT/manifest-module-cache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$DISKLENS_BUILD_ROOT/manifest-module-cache"
 DISKLENS_OUTPUT_DIR="$(cd "$DISKLENS_OUTPUT_DIR" && pwd)"
-DISKLENS_APP="$DISKLENS_OUTPUT_DIR/DiskLens.app"
+DISKLENS_APP="$DISKLENS_OUTPUT_DIR/Disk Manage.app"
 if [[ -e "$DISKLENS_APP" ]]; then
     echo "Output already exists: $DISKLENS_APP. Select an empty output directory." >&2
     exit 1

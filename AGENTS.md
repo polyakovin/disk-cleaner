@@ -50,7 +50,7 @@ After `money: go`, define the smallest product change that removes a repeated
 bottleneck from a paid manual delivery. Preserve the commercial evidence and
 gate decisions in the implementation brief.
 
-## Imported DiskLens application
+## Imported Disk Manage application
 
 - `DiskLens/` is the existing native macOS 14+ app, imported from an earlier chat; `DiskLens/AGENTS.md` defines its architecture and safety constraints.
 - Swift 5.9+ and Xcode Command Line Tools or Xcode are required. No external Swift packages.

@@ -1,4 +1,4 @@
-# DiskLens
+# Disk Manage
 
 - Native macOS 14+ application. Swift Package Manager, Swift 5.9+; no external dependencies.
 - `DiskLensCore` contains the POSIX metadata scanner, report generation and agent transports. It must not import SwiftUI or AppKit.

@@ -32,7 +32,7 @@ struct MainView: View {
         .sheet(item: $model.pendingCandidateRemoval) { request in
             CandidateRemovalConfirmationView(request: request, cancel: model.cancelCandidateRemoval, confirm: model.confirmCandidateRemoval)
         }
-        .alert("DiskLens", isPresented: Binding(get: { model.message != nil }, set: { if !$0 { model.message = nil } })) {
+        .alert("Disk Manage", isPresented: Binding(get: { model.message != nil }, set: { if !$0 { model.message = nil } })) {
             Button("Понятно", role: .cancel) { model.message = nil }
         } message: { Text(model.message ?? "") }
     }
@@ -42,7 +42,7 @@ struct MainView: View {
             HStack(spacing: 10) {
                 Image(systemName: "externaldrive.fill").font(.title2).foregroundStyle(accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("DiskLens").font(.system(size: 21, weight: .semibold, design: .rounded))
+                    Text("Disk Manage").font(.system(size: 21, weight: .semibold, design: .rounded))
                     Text("Место под контролем").font(.caption).foregroundStyle(.secondary)
                 }
             }.padding(.top, 14)

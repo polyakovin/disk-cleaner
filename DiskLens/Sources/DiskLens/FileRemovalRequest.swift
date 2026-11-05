@@ -23,7 +23,7 @@ enum FileRemovalFailure: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .protectedPath: return "Корень замера, домашнюю папку, системные каталоги и Корзину нельзя удалить из DiskLens."
+        case .protectedPath: return "Корень замера, домашнюю папку, системные каталоги и Корзину нельзя удалить из Disk Manage."
         case .outsideScan: return "Объект находится вне текущего замера. Просканируйте его папку заново."
         case .changed: return "Объект или путь к нему изменился. Повторите сканирование и выберите объект заново."
         case .unavailable(let reason): return "Не удалось проверить объект: \(reason)"

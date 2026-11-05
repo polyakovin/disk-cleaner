@@ -1,4 +1,4 @@
-# Commercial thesis — ai-disk-cleaner
+# Commercial thesis — Disk Manage
 
 ## One-sentence hypothesis
 
