@@ -4,6 +4,15 @@ set -euo pipefail
 DISKLENS_PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DISKLENS_OUTPUT_DIR="${1:-$DISKLENS_PROJECT_ROOT/build}"
 DISKLENS_BUILD_ROOT="${DISKLENS_BUILD_ROOT:-$DISKLENS_PROJECT_ROOT/.build/package}"
+DISKLENS_SIGNING_CONFIG="$DISKLENS_PROJECT_ROOT/.swiftpm/signing-identity"
+if [[ -z "${DISKLENS_SIGNING_IDENTITY:-}" && -f "$DISKLENS_SIGNING_CONFIG" ]]; then
+    DISKLENS_SIGNING_IDENTITY="$(cat "$DISKLENS_SIGNING_CONFIG")"
+    if [[ -z "$DISKLENS_SIGNING_IDENTITY" ]]; then
+        echo "Signing identity file is empty: $DISKLENS_SIGNING_CONFIG" >&2
+        exit 1
+    fi
+fi
+DISKLENS_SIGNING_IDENTITY="${DISKLENS_SIGNING_IDENTITY:--}"
 mkdir -p "$DISKLENS_OUTPUT_DIR" "$DISKLENS_BUILD_ROOT"
 export CLANG_MODULE_CACHE_PATH="$DISKLENS_BUILD_ROOT/manifest-module-cache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$DISKLENS_BUILD_ROOT/manifest-module-cache"
@@ -29,7 +38,11 @@ cp "$DISKLENS_PROJECT_ROOT/assets/Info.plist" "$DISKLENS_APP/Contents/Info.plist
 mkdir -p "$DISKLENS_BUILD_ROOT/DiskLens.iconset"
 xcrun swift "$DISKLENS_PROJECT_ROOT/scripts/make-icon.swift" "$DISKLENS_BUILD_ROOT/DiskLens.iconset"
 iconutil -c icns "$DISKLENS_BUILD_ROOT/DiskLens.iconset" -o "$DISKLENS_APP/Contents/Resources/DiskLens.icns"
-codesign --force --sign - "$DISKLENS_APP"
+codesign --force --sign "$DISKLENS_SIGNING_IDENTITY" "$DISKLENS_APP"
 codesign --verify --strict "$DISKLENS_APP"
 plutil -lint "$DISKLENS_APP/Contents/Info.plist"
+if [[ "$DISKLENS_SIGNING_IDENTITY" == "-" ]]; then
+    echo "Warning: ad-hoc signing. macOS may ask for file access again after rebuilding." >&2
+    echo "Set DISKLENS_SIGNING_IDENTITY or save an identity in $DISKLENS_SIGNING_CONFIG for stable signing." >&2
+fi
 echo "Built: $DISKLENS_APP"

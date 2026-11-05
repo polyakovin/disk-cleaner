@@ -1,3 +1,11 @@
+# DiskLens build artifacts and local scan reports
+build/
+DiskLens/.build/
+DiskLens/.swiftpm/
+__pycache__/
+*.xcuserstate
+disklens-real-report.json
+
 # BEGIN Projects Control Panel Git safety
 .env
 .env.*
@@ -44,22 +52,17 @@ secrets.yml
 *.sql.gz
 .project-control-panel/birthdays.json
 .project-control-panel/.birthdays.lock
+.project-control-panel/calendar-history.json
+.project-control-panel/.calendar-history.lock
 .project-control-panel/evaluations.json
 .project-control-panel/dashboard-blocks.json
 .project-control-panel/product-signals.json
 .project-control-panel/contacts.json
 .project-control-panel/chat.json
+task-chat-*.json
 .project-control-panel/tasks.json
 .project-control-panel/portfolio.json
 _файлы/
 .playwright-mcp/
 .DS_Store
 # END Projects Control Panel Git safety
-
-# DiskLens build artifacts and local scan reports
-build/
-DiskLens/.build/
-DiskLens/.swiftpm/
-__pycache__/
-*.xcuserstate
-disklens-real-report.json

@@ -37,7 +37,8 @@ private final class NoRedirects: NSObject, URLSessionTaskDelegate {
 }
 
 public enum APIAgent {
-    public static func request(settings: AgentSettings, key: String, report: DiskReport) throws -> URLRequest {
+    public static func request(settings: AgentSettings, key: String, report: DiskReport,
+                               focusedOn entry: DiskEntry? = nil, reviewingCandidates: Bool = false) throws -> URLRequest {
         guard let url = URL(string: settings.endpoint.trimmingCharacters(in: .whitespacesAndNewlines)),
               let host = url.host, url.user == nil, url.password == nil, url.fragment == nil,
               url.scheme == "https" || (url.scheme == "http" && ["localhost", "127.0.0.1", "[::1]", "::1"].contains(host)) else {
@@ -51,13 +52,14 @@ public enum APIAgent {
         request.timeoutInterval = 180
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if !key.isEmpty { request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization") }
-        let input = try report.json(anonymizeHome: settings.anonymizeHome, compactForAgent: true)
+        let input = try report.agentData(focusedOn: entry, anonymizeHome: settings.anonymizeHome, reviewingCandidates: reviewingCandidates)
+        let instructions = report.agentInstructions(focusedOn: entry, reviewingCandidates: reviewingCandidates)
         let body: [String: Any]
         if settings.format == .responses {
-            body = ["model": settings.model, "instructions": AgentInstructions.text, "input": input,
+            body = ["model": settings.model, "instructions": instructions, "input": input,
                     "store": false, "max_output_tokens": 4000]
         } else {
-            body = ["model": settings.model, "messages": [["role": "system", "content": AgentInstructions.text],
+            body = ["model": settings.model, "messages": [["role": "system", "content": instructions],
                                                           ["role": "user", "content": input]], "stream": false]
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -100,8 +102,10 @@ public enum APIAgent {
     }
 
     public static func analyze(settings: AgentSettings, key: String, report: DiskReport,
+                               focusedOn entry: DiskEntry? = nil,
+                               reviewingCandidates: Bool = false,
                                configuration: URLSessionConfiguration = .ephemeral) async throws -> String {
-        let request = try request(settings: settings, key: key, report: report)
+        let request = try request(settings: settings, key: key, report: report, focusedOn: entry, reviewingCandidates: reviewingCandidates)
         let config = configuration
         config.timeoutIntervalForResource = 180
         let session = URLSession(configuration: config, delegate: NoRedirects(), delegateQueue: nil)
@@ -129,9 +133,11 @@ private final class OutputBuffer: @unchecked Sendable {
 }
 
 public enum CommandAgent {
-    public static func analyze(settings: AgentSettings, report: DiskReport, cancellation: CancellationFlag,
+    public static func analyze(settings: AgentSettings, report: DiskReport, focusedOn entry: DiskEntry? = nil,
+                               reviewingCandidates: Bool = false,
+                               cancellation: CancellationFlag,
                                timeout: TimeInterval = 300) async throws -> String {
-        let prompt = try report.agentPrompt(anonymizeHome: settings.anonymizeHome)
+        let prompt = try report.agentPrompt(anonymizeHome: settings.anonymizeHome, focusedOn: entry, reviewingCandidates: reviewingCandidates)
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
                 do { continuation.resume(returning: try run(settings: settings, input: prompt, cancellation: cancellation, timeout: timeout)) }

@@ -9,9 +9,11 @@ let package = Package(
         .executable(name: "disklens-cli", targets: ["DiskLensCLI"])
     ],
     targets: [
-        .target(name: "DiskLensCore"),
+        .systemLibrary(name: "CSQLite"),
+        .target(name: "DiskLensCore", dependencies: ["CSQLite"]),
         .executableTarget(name: "DiskLens", dependencies: ["DiskLensCore"]),
         .executableTarget(name: "DiskLensCLI", dependencies: ["DiskLensCore"]),
-        .testTarget(name: "DiskLensCoreTests", dependencies: ["DiskLensCore"])
+        .testTarget(name: "DiskLensCoreTests", dependencies: ["DiskLensCore"]),
+        .testTarget(name: "DiskLensTests", dependencies: ["DiskLens"])
     ]
 )

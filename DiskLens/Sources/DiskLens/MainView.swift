@@ -6,7 +6,7 @@ private let accent = Color(red: 0.06, green: 0.52, blue: 0.48)
 
 struct MainView: View {
     @ObservedObject var model: AppModel
-    @State private var kindFilter = "Все"
+    @State private var candidatesHovered = false
     var body: some View {
         HStack(spacing: 0) {
             sidebar.frame(width: 208)
@@ -15,13 +15,23 @@ struct MainView: View {
                 header
                 Divider()
                 if model.scanning { progress }
-                if model.report != nil { resultContent }
-                else { emptyState }
+                resultContent
             }
             .background(Color(nsColor: .controlBackgroundColor))
         }
         .tint(accent)
+        .task(id: model.treeQuery) { model.reloadTree() }
+        .onChange(of: model.search) { _, _ in model.treeOffset = 0 }
+        .onChange(of: model.treeOrder) { _, _ in model.treeOffset = 0 }
+        .onChange(of: model.treeKind) { _, _ in model.treeOffset = 0 }
         .sheet(isPresented: $model.showingSettings) { AgentSettingsView(model: model) }
+        .sheet(isPresented: $model.showingDiskAccess) { DiskAccessView() }
+        .sheet(item: $model.pendingRemoval) { request in
+            FileRemovalConfirmationView(request: request, cancel: model.cancelRemoval, confirm: model.confirmRemoval)
+        }
+        .sheet(item: $model.pendingCandidateRemoval) { request in
+            CandidateRemovalConfirmationView(request: request, cancel: model.cancelCandidateRemoval, confirm: model.confirmCandidateRemoval)
+        }
         .alert("DiskLens", isPresented: Binding(get: { model.message != nil }, set: { if !$0 { model.message = nil } })) {
             Button("Понятно", role: .cancel) { model.message = nil }
         } message: { Text(model.message ?? "") }
@@ -39,7 +49,8 @@ struct MainView: View {
             VStack(spacing: 5) {
                 ForEach(Pane.allCases) { pane in
                     Button {
-                        model.pane = pane; model.selection = nil; model.search = ""
+                        if pane == .assistant, model.analysisReport == nil { model.prepareAnalysis(for: nil) }
+                        else { model.pane = pane; model.selection = nil; model.search = "" }
                     } label: {
                         HStack(spacing: 11) {
                             Image(systemName: pane.icon).font(.system(size: 16)).frame(width: 20)
@@ -50,7 +61,7 @@ struct MainView: View {
                         .background(model.pane == pane ? accent.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 9))
                         .foregroundStyle(model.pane == pane ? accent : .primary)
                         .contentShape(Rectangle())
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.plain).disabled(model.interactionLocked && pane == .assistant)
                 }
             }
             Spacer()
@@ -69,8 +80,13 @@ struct MainView: View {
                     }.frame(height: 5)
                 }.padding(14).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
             }
-            Button { model.showingSettings = true } label: {
-                Label("Подключение ИИ", systemImage: "slider.horizontal.3").font(.caption)
+            VStack(alignment: .leading, spacing: 14) {
+                Button { model.showingDiskAccess = true } label: {
+                    Label("Доступ к диску…", systemImage: "lock.open").font(.caption)
+                }.disabled(model.interactionLocked)
+                Button { model.showingSettings = true } label: {
+                    Label("Подключение ИИ", systemImage: "slider.horizontal.3").font(.caption)
+                }
             }.buttonStyle(.plain).foregroundStyle(.secondary).padding(.bottom, 12)
         }.padding(.horizontal, 16).background(Color(nsColor: .windowBackgroundColor))
     }
@@ -80,11 +96,12 @@ struct MainView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(model.pane.rawValue).font(.system(size: 25, weight: .semibold, design: .rounded))
                 Menu {
-                    Button("Домашняя папка") { model.setTarget(FileManager.default.homeDirectoryForCurrentUser) }
-                    Button("Весь Mac") { model.setTarget(URL(fileURLWithPath: "/System/Volumes/Data")) }
+                    Button("Домашняя папка") { model.openLocation(FileManager.default.homeDirectoryForCurrentUser) }
+                    Button("Весь Mac") { model.openLocation(URL(fileURLWithPath: "/System/Volumes/Data")) }
+                    Button("Корень файловой системы") { model.openLocation(URL(fileURLWithPath: "/")) }
                     Button("Выбрать папку…") { model.chooseFolder() }
                 } label: { Label(model.targetName, systemImage: "folder").font(.caption) }
-                .menuStyle(.borderlessButton).fixedSize().disabled(model.scanning)
+                .menuStyle(.borderlessButton).fixedSize().disabled(model.interactionLocked)
             }
             Spacer()
             if model.report != nil {
@@ -94,24 +111,38 @@ struct MainView: View {
                     Button("Скопировать отчёт") { if let report = model.report { model.copy(report.text()) } }
                 } label: { Image(systemName: "square.and.arrow.up") }.menuStyle(.borderlessButton).fixedSize()
                 .help("Экспортировать отчёт")
+                .accessibilityLabel("Экспортировать отчёт")
+                .disabled(model.workLocked)
             }
             if model.scanning {
                 Button("Остановить", role: .cancel) { model.cancelScan() }.buttonStyle(.bordered)
             } else {
-                Button { model.scan() } label: { Label("Сканировать", systemImage: "arrow.clockwise") }
+                Button { if let current = model.current { model.scanFolder(current) } else { model.scan() } } label: { Label("Обновить размеры", systemImage: "arrow.clockwise") }
                     .buttonStyle(.borderedProminent).controlSize(.large)
+                    .disabled(model.workLocked)
+                    .contextMenu {
+                        Button("Пересканировать полностью") { model.scan(forceFull: true) }.disabled(model.workLocked)
+                    }
             }
         }.padding(.horizontal, 28).padding(.vertical, 22)
     }
 
     private var progress: some View {
-        HStack(spacing: 14) {
-            ProgressView().controlSize(.small)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Сканирование · \(model.scanProgress?.items ?? 0) объектов · \(SizeFormat.string(model.scanProgress?.allocatedBytes ?? 0))").font(.callout)
-                Text(model.scanProgress?.currentPath ?? model.target.path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 14) {
+                ProgressView().controlSize(.small)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Сканирование · \(model.scanProgress?.items ?? 0) объектов · \(SizeFormat.string(model.scanProgress?.allocatedBytes ?? 0))").font(.callout)
+                    Text(model.scanProgress?.currentPath ?? model.target.path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                }
+                Spacer()
             }
-            Spacer()
+            Text((model.scanProgress?.reusedFolders ?? 0) > 0
+                 ? "Из прошлого замера: \(model.scanProgress?.reusedFolders ?? 0) папок. Обновляем изменённые ветви."
+                 : model.scanProgress?.usesPreviousScan == true
+                 ? "Проверяем изменения. Известные размеры остаются видны."
+                 : "Известные размеры сохранены. Размеры новых папок уточняются по мере обхода.")
+                .font(.caption).foregroundStyle(.secondary)
         }.padding(16).background(accent.opacity(0.07))
     }
 
@@ -132,10 +163,12 @@ struct MainView: View {
                 Button("Выбрать папку…") { model.chooseFolder() }.buttonStyle(.bordered).controlSize(.large)
                 Button("Начать сканирование") { model.scan() }.buttonStyle(.borderedProminent).controlSize(.large)
             }.disabled(model.scanning)
+            Button("Настроить общий доступ к папкам…") { model.showingDiskAccess = true }
+                .buttonStyle(.link)
             Spacer()
             HStack(spacing: 28) {
                 Label("Только метаданные", systemImage: "doc.text.viewfinder")
-                Label("Без удаления файлов", systemImage: "checkmark.shield")
+                Label("Удаление в Корзину", systemImage: "trash")
                 Label("Работает локально", systemImage: "laptopcomputer")
             }.font(.caption).foregroundStyle(.secondary).padding(.bottom, 30)
         }.frame(maxWidth: .infinity)
@@ -146,19 +179,35 @@ struct MainView: View {
         else {
             VStack(spacing: 18) {
                 metrics
-                if let report = model.report, report.isPartial {
+                if let report = model.displayedReport, report.isPartial, !model.scanning {
                     HStack(spacing: 9) {
                         Image(systemName: "info.circle").foregroundStyle(.orange)
                         Text(report.cancelled ? "Замер остановлен. Показаны найденные данные; итоговый размер неполный." : "Не удалось проверить объектов: \(report.issueCount). Размеры могут быть занижены.")
                         Spacer()
                         Button("Доступ к диску") {
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
+                            model.showingDiskAccess = true
                         }.buttonStyle(.link)
                     }.font(.caption).padding(12).background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 }
                 tableHeader
+                if model.pane == .overview, let error = model.treeError {
+                    HStack {
+                        Text(error).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Доступ к диску") { model.showingDiskAccess = true }.buttonStyle(.link)
+                    }
+                }
                 if entries.isEmpty { emptyList }
                 else { entryTable }
+                if model.pane == .overview, let page = model.treePage, page.total > model.treeLimit {
+                    HStack {
+                        Text("\(model.treeOffset + 1)–\(min(page.total, model.treeOffset + page.entries.count)) из \(page.total) объектов").font(.caption)
+                        Spacer()
+                        Button("Предыдущие") { model.treeOffset = max(0, model.treeOffset - model.treeLimit) }.disabled(model.treeOffset == 0)
+                        Button("Следующие") { model.treeOffset += model.treeLimit }.disabled(model.treeOffset + model.treeLimit >= page.total)
+                    }
+                }
+                safetyAction
                 footer
             }.padding(.horizontal, 28).padding(.top, 24).padding(.bottom, 14)
         }
@@ -166,9 +215,20 @@ struct MainView: View {
 
     private var metrics: some View {
         HStack(spacing: 14) {
-            metric("Найдено в замере", value: SizeFormat.string(model.report?.root.allocatedBytes ?? 0), icon: "chart.pie", color: accent)
-            metric("Файлов", value: (model.report?.root.fileCount ?? 0).formatted(), icon: "doc.on.doc", color: .blue)
-            metric("Кандидаты на очистку", value: SizeFormat.string(model.report?.candidateBytes ?? 0), icon: "archivebox", color: .orange)
+            metric("Найдено в замере", value: SizeFormat.string(model.displayedReport?.root.allocatedBytes ?? 0), icon: "chart.pie", color: accent)
+            metric("Файлов", value: (model.displayedReport?.root.fileCount ?? 0).formatted(), icon: "doc.on.doc", color: .blue)
+            Button {
+                model.pane = .candidates; model.selection = nil; model.search = ""
+            } label: {
+                metric("Кандидаты на очистку", value: SizeFormat.string(model.displayedReport?.candidateBytes ?? 0), icon: "archivebox", color: .orange)
+                    .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.orange.opacity(candidatesHovered ? 0.5 : 0)))
+                    .contentShape(RoundedRectangle(cornerRadius: 13))
+            }
+            .buttonStyle(.plain)
+            .onHover { candidatesHovered = $0 }
+            .help("Показать кандидатов на очистку")
+            .accessibilityLabel("Кандидаты на очистку")
+            .accessibilityValue(SizeFormat.string(model.displayedReport?.candidateBytes ?? 0))
         }
     }
     private func metric(_ label: String, value: String, icon: String, color: Color) -> some View {
@@ -185,22 +245,47 @@ struct MainView: View {
             HStack {
                 if model.pane == .overview {
                     Button {
-                        if !model.navigation.isEmpty { model.navigation.removeLast(); model.selection = nil; model.search = "" }
-                    } label: { Image(systemName: "chevron.left") }.disabled(model.navigation.isEmpty)
-                    Text(model.current?.path ?? "").font(.caption.monospaced()).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
-                } else { Text(model.pane == .files ? "100 крупнейших файлов в замере" : "Известные каталоги кэшей").font(.headline) }
+                        model.goToParent()
+                    } label: { Image(systemName: "chevron.up") }.disabled(model.openedPath == "/" || model.interactionLocked)
+                    .help("Вернуться к родительской папке")
+                    .accessibilityLabel("Вернуться к родительской папке")
+                    Text(model.openedPath).font(.caption.monospaced()).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                } else { Text(model.pane == .files ? "100 крупнейших файлов в замере" : "Кандидаты из замера").font(.headline) }
                 Spacer()
                 TextField("Поиск в отчёте", text: $model.search).textFieldStyle(.roundedBorder).frame(width: 190)
             }
             if model.pane == .candidates {
                 Text("Проверьте содержимое перед очисткой. Кэш может потребоваться скачать или создать заново; указанный объём не гарантирует такое же освобождение места.")
                     .font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    Button { model.prepareCandidateReview() } label: {
+                        Label("Пересмотреть с ИИ", systemImage: "sparkles")
+                    }.disabled(model.workLocked || model.analyzing)
+                    Text("Проверить список и найти другие кандидаты в общем замере")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Menu {
+                        Button("Всех в Корзину…", role: .destructive) { model.requestCandidateRemoval() }
+                        Button("Всех безвозвратно…", role: .destructive) { model.requestCandidateRemoval(mode: .permanent) }
+                    } label: {
+                        Label("Удалить всех… (\(model.displayedReport?.candidates.count ?? 0))", systemImage: "trash")
+                    }.fixedSize().disabled(model.interactionLocked || model.displayedReport?.candidates.isEmpty != false)
+                    .help("Удалить весь список кандидатов, независимо от поиска. Сначала откроется подтверждение всех путей.")
+                }
+                aiRecommendedRemovalAction
             } else if model.pane == .overview {
                 HStack {
-                    Picker("Тип", selection: $kindFilter) { ForEach(["Все", "Папки", "Файлы"], id: \.self) { Text($0) } }
+                    Picker("Тип", selection: $model.treeKind) {
+                        Text("Все").tag(EntryKind?.none)
+                        Text("Папки").tag(EntryKind?.some(.folder))
+                        Text("Файлы").tag(EntryKind?.some(.file))
+                    }
                         .pickerStyle(.segmented).frame(width: 235)
                     Spacer()
-                    Text("По размеру · выделенные блоки").font(.caption).foregroundStyle(.secondary)
+                    Picker("Сортировка", selection: $model.treeOrder) {
+                        ForEach(FileTreeOrder.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }.labelsHidden().frame(width: 175)
+                    Text("Выделенные блоки").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -209,12 +294,11 @@ struct MainView: View {
     private var entries: [DiskEntry] {
         var list: [DiskEntry]
         switch model.pane {
-        case .files: list = model.report?.largestFiles ?? []
-        case .candidates: list = model.report?.candidates.map(\.entry) ?? []
+        case .files: list = model.displayedReport?.largestFiles ?? []
+        case .candidates: list = model.displayedReport?.candidates.map(\.entry) ?? []
         default:
             list = model.current?.children ?? []
-            if kindFilter == "Папки" { list = list.filter(\.isFolder) }
-            if kindFilter == "Файлы" { list = list.filter { $0.kind == .file } }
+            if model.treeStore == nil, let kind = model.treeKind { list = list.filter { $0.kind == kind } }
         }
         if !model.search.isEmpty { list = list.filter { $0.path.localizedCaseInsensitiveContains(model.search) } }
         return list
@@ -229,13 +313,21 @@ struct MainView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(entry.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
                         if model.pane != .overview { Text(URL(fileURLWithPath: entry.path).deletingLastPathComponent().path).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) }
+                        if model.pane == .candidates, let candidate = model.displayedReport?.candidates.first(where: { $0.id == entry.id }) {
+                            Text(candidate.reason).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                .help(candidate.reason + "\n" + candidate.caution)
+                        }
                     }
                 }.padding(.vertical, 6).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     .onTapGesture(count: entry.isFolder ? 1 : 2) { model.navigate(entry); if entry.isFolder { model.pane = .overview } }
             }.width(min: 230, ideal: 350)
-            TableColumn("Размер") { entry in Text(SizeFormat.string(entry.allocatedBytes)).monospacedDigit().fontWeight(.medium) }.width(100)
+            TableColumn("Размер") { entry in
+                Text(entry.sizeIsKnown == false ? "Уточняется" : SizeFormat.string(entry.allocatedBytes))
+                    .monospacedDigit().fontWeight(.medium)
+                    .foregroundStyle(entry.sizeIsKnown == false ? .secondary : .primary)
+            }.width(110)
             TableColumn("Доля") { entry in
-                let denominator = model.pane == .overview ? (model.current?.allocatedBytes ?? 0) : (model.report?.root.allocatedBytes ?? 0)
+                let denominator = model.pane == .overview ? (model.current?.allocatedBytes ?? 0) : (model.displayedReport?.root.allocatedBytes ?? 0)
                 let share = denominator > 0 ? Double(entry.allocatedBytes) / Double(denominator) : 0
                 HStack(spacing: 8) {
                     GeometryReader { g in
@@ -251,43 +343,85 @@ struct MainView: View {
                 HStack(spacing: 9) {
                     if entry.issueCount > 0 { Image(systemName: "exclamationmark.circle").foregroundStyle(.orange).help("Размер неполный: часть объектов недоступна") }
                     Button { model.reveal(entry) } label: { Image(systemName: "arrow.up.forward.square") }.buttonStyle(.borderless).help("Показать в Finder")
+                        .accessibilityLabel("Показать в Finder: \(entry.name)")
+                    Button { model.prepareAnalysis(for: entry) } label: { Image(systemName: "sparkles") }
+                        .buttonStyle(.borderless).help("Спросить нейронку, безопасно ли это удалять")
+                        .accessibilityLabel("Спросить нейронку, безопасно ли это удалять: \(entry.name)")
+                        .disabled(model.interactionLocked || model.analyzing)
                     Menu {
                         Button("Показать в Finder") { model.reveal(entry) }
                         Button("Скопировать путь") { model.copy(entry.path) }
+                        Button("Спросить нейронку, безопасно ли это удалять") { model.prepareAnalysis(for: entry) }
+                            .disabled(model.interactionLocked || model.analyzing)
                         if entry.isFolder {
-                            Button("Открыть папку") { model.navigate(entry); model.pane = .overview }
-                            Button("Сканировать эту папку") { model.setTarget(URL(fileURLWithPath: entry.path)); model.scan() }.disabled(model.scanning)
+                            Button("Открыть папку") { model.navigate(entry); model.pane = .overview }.disabled(model.interactionLocked)
+                            Button("Сканировать эту папку") { model.scanFolder(entry) }.disabled(model.interactionLocked)
                         }
+                        Divider()
+                        Button("Переместить в Корзину…", role: .destructive) { model.requestRemoval(entry) }
+                            .disabled(model.interactionLocked)
+                        Button("Удалить безвозвратно…", role: .destructive) { model.requestRemoval(entry, mode: .permanent) }
+                            .disabled(model.interactionLocked)
                     } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).fixedSize()
+                    .help("Действия с объектом")
+                    .accessibilityLabel("Действия с объектом: \(entry.name)")
                 }
-            }.width(70)
+            }.width(100)
         }.tableStyle(.inset(alternatesRowBackgrounds: true))
     }
 
     private var emptyList: some View {
         VStack(spacing: 12) {
             Image(systemName: "folder.badge.questionmark").font(.largeTitle).foregroundStyle(.secondary)
-            Text(model.search.isEmpty ? "В этом разделе пока нет объектов" : "Совпадений в сохранённом отчёте нет").font(.headline)
-            if model.pane == .overview, let current = model.current, current.childCount > 0, current.children.isEmpty {
-                Text("Для этой глубины сохранён общий размер. Просканируйте папку отдельно, чтобы увидеть содержимое.").font(.caption).foregroundStyle(.secondary)
-                Button("Сканировать папку") { model.setTarget(URL(fileURLWithPath: current.path)); model.scan() }.disabled(model.scanning)
-            }
+            Text(model.loadingTree ? "Открываем папку…" : model.search.isEmpty ? "В папке нет доступных объектов" : "Совпадений нет").font(.headline)
+            if let error = model.treeError { Text(error).font(.caption).foregroundStyle(.secondary) }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var safetyAction: some View {
+        let entry = model.selected ?? (model.pane == .overview ? model.current : nil)
+        return HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry?.name ?? "Выберите файл или папку").font(.callout.weight(.medium)).lineLimit(1)
+                Text(entry?.path ?? "Вопрос будет о выбранном объекте")
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                if let entry { model.prepareAnalysis(for: entry) }
+            } label: {
+                Label("Спросить нейронку, безопасно ли это удалять", systemImage: "sparkles")
+            }.disabled(entry == nil || model.interactionLocked || model.analyzing)
+        }.padding(12).background(accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private var footer: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                if let report = model.report {
-                    Text("Замер \(report.measuredAt.formatted(date: .omitted, time: .shortened)) · \(Int(report.durationSeconds)) с · ничего не удалено").font(.caption2)
+                if model.scanning {
+                    Text("Обновляем размеры · известные данные остаются доступны").font(.caption2)
+                } else if let report = model.report {
+                    Text("Последний замер: \(report.measuredAt.formatted(date: .abbreviated, time: .shortened)) · \(Int(report.durationSeconds)) с").font(.caption2)
+                    if let reuse = report.scanReuse, reuse.reusedFolders > 0 {
+                        Text("Из прошлого замера: \(reuse.reusedFolders) папок · проверено заново: \(reuse.inspectedItems) объектов").font(.caption2)
+                    }
                 }
-                if model.pane == .overview, let current = model.current, current.childCount > current.children.count {
-                    Text("Сохранены \(current.children.count) крупнейших из \(current.childCount) объектов этой папки").font(.caption2)
+                if model.removing { Text(model.removalMode?.progressTitle ?? "Удаление…").font(.caption).foregroundStyle(accent) }
+                else if let status = model.removalStatus { Text(status).font(.caption).textSelection(.enabled) }
+                if model.pane == .overview, let page = model.treePage {
+                    Text("\(page.total) объектов · " + (model.automaticRefreshPaused ? "обновление остановлено" : model.automaticRefreshAvailable
+                         ? "изменения проверяются автоматически" : "журнал недоступен, размеры обновляются по кнопке")).font(.caption2)
                 } else { Text("APFS-клоны и снимки могут влиять на фактически освобождаемое место").font(.caption2) }
             }.foregroundStyle(.secondary)
             Spacer()
-            if let selected = model.selected { Button("В Finder") { model.reveal(selected) }.controlSize(.small) }
-            Button("Анализ ИИ") { model.pane = .assistant }.controlSize(.small)
+            if let selected = model.selected {
+                Button("В Finder") { model.reveal(selected) }.controlSize(.small)
+                Menu {
+                    Button("Переместить в Корзину…", role: .destructive) { model.requestRemoval(selected) }
+                    Button("Удалить безвозвратно…", role: .destructive) { model.requestRemoval(selected, mode: .permanent) }
+                } label: { Label("Удалить…", systemImage: "trash") }
+                    .controlSize(.small).disabled(model.interactionLocked)
+            }
+            Button("Анализ ИИ") { model.prepareAnalysis(for: nil) }.controlSize(.small).disabled(model.interactionLocked || model.analyzing)
         }
     }
 
@@ -297,10 +431,32 @@ struct MainView: View {
                 HStack(spacing: 16) {
                     Image(systemName: "sparkles").font(.system(size: 30)).foregroundStyle(accent).padding(18).background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 15))
                     VStack(alignment: .leading, spacing: 7) {
-                        Text("План освобождения места").font(.system(size: 24, weight: .semibold, design: .rounded))
-                        Text("Агент оценит отчёт и предложит порядок действий.\nРекомендации останутся текстом, без выполнения команд.").font(.callout).foregroundStyle(.secondary)
+                        Text(model.reviewingCandidates ? "Пересмотр кандидатов с ИИ" : (model.analysisEntry == nil ? "План освобождения места" : "Безопасно ли это удалять?")).font(.system(size: 24, weight: .semibold, design: .rounded))
+                        Text(model.reviewingCandidates
+                             ? "Агент проверит текущих кандидатов и предложит других из общего замера.\nПросмотрите предложения и примените выбранные изменения."
+                             : model.analysisEntry == nil
+                             ? "Агент оценит отчёт и предложит порядок действий.\nРекомендации останутся текстом, без выполнения команд."
+                             : "Агент предложит, что очистить, что сохранить\nи что проверить для принятия решения.").font(.callout).foregroundStyle(.secondary)
                     }
                     Spacer()
+                }
+                if model.reviewingCandidates, let report = model.analysisReport {
+                    let review = CandidateReview(report: report)
+                    Text("Объектов для проверки: \(review.entries.count), текущих кандидатов: \(report.candidates.count). Крупнейшие объекты сохранённого дерева и списка файлов; содержимое файлов неизвестно.\(review.omittedCount > 0 ? " За пределами запроса: \(review.omittedCount) объектов." : "")")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Button("Вернуться к кандидатам") { model.pane = .candidates }.buttonStyle(.link)
+                }
+                if let entry = model.analysisEntry {
+                    VStack(alignment: .leading, spacing: 9) {
+                        HStack {
+                            Label(entry.name, systemImage: entry.isFolder ? "folder" : "doc").font(.headline)
+                            Spacer()
+                            Button("Весь отчёт") { model.prepareAnalysis(for: nil) }.disabled(model.analyzing)
+                        }
+                        Text(entry.path).font(.caption.monospaced()).textSelection(.enabled)
+                        Text("Размер в замере: \(SizeFormat.string(entry.allocatedBytes)). Для разбора используются состав папки, крупные файлы и найденные внутри кандидаты на очистку.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }.padding(16).background(accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
                 }
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
@@ -312,23 +468,29 @@ struct MainView: View {
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     Text("Передаются пути, размеры и ограничения замера. Содержимое файлов не передаётся.").font(.caption).foregroundStyle(.secondary)
                     HStack {
-                        if model.analyzing {
+                        if model.preparingAnalysis {
                             ProgressView().controlSize(.small)
-                            Text("Агент анализирует отчёт…").font(.callout)
+                            Text("Уточняем состав выбранной папки…").font(.callout)
+                            Spacer()
+                            Button("Остановить") { model.cancelAnalysis() }
+                        } else if model.analyzing {
+                            ProgressView().controlSize(.small)
+                            Text(model.reviewingCandidates ? "Агент пересматривает кандидатов…" : (model.analysisEntry == nil ? "Агент анализирует отчёт…" : "Агент оценивает безопасность удаления…")).font(.callout)
                             Spacer()
                             Button("Остановить") { model.cancelAnalysis() }
                         } else {
-                            Button("Получить рекомендации") { model.analyze() }.buttonStyle(.borderedProminent).controlSize(.large)
+                            Button(model.reviewingCandidates ? "Проверить кандидатов и найти ещё" : (model.analysisEntry == nil ? "Получить рекомендации" : "Спросить нейронку, безопасно ли это удалять")) { model.analyze() }
+                                .buttonStyle(.borderedProminent).controlSize(.large)
                             Button("Скопировать запрос") {
-                                if let prompt = try? model.report?.agentPrompt(anonymizeHome: model.settings.anonymizeHome) { model.copy(prompt) }
+                                model.copy(model.analysisPrompt)
                             }.controlSize(.large)
                         }
                     }
                 }.padding(20).background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
-                DisclosureGroup("Передаваемый отчёт") {
-                    if let report = model.report {
+                DisclosureGroup("Передаваемый запрос") {
+                    if model.analysisReport != nil {
                         ScrollView([.vertical, .horizontal]) {
-                            Text((try? report.json(anonymizeHome: model.settings.anonymizeHome, compactForAgent: true)) ?? "")
+                            Text(model.analysisPrompt)
                                 .font(.system(size: 11, design: .monospaced)).textSelection(.enabled).padding(10)
                         }.frame(height: 220).background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: 8))
                     }
@@ -342,11 +504,61 @@ struct MainView: View {
                     Text(model.recommendations).font(.system(size: 14)).lineSpacing(5).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                         .padding(20).background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
                 }
-                if let report = model.report, report.isPartial {
-                    Label("Агенту передано, что замер неполный. Для точных рекомендаций повторите его с нужным доступом.", systemImage: "info.circle")
+                if let result = model.candidateReviewResult, let snapshot = model.analysisReport {
+                    candidateReviewChanges(result, review: CandidateReview(report: snapshot))
+                }
+                if let report = model.analysisReport, report.isPartial {
+                    Label("Это предварительный или неполный замер. В запросе агенту будет указано это ограничение.", systemImage: "info.circle")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }.padding(28)
+        }
+    }
+
+    private func candidateReviewChanges(_ result: CandidateReviewResult, review: CandidateReview) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Предложения к списку").font(.headline)
+            if result.decisions.isEmpty { Text("ИИ не предложил изменений. Текущий список сохранён.").font(.callout) }
+            ForEach(result.decisions) { decision in
+                if let entry = review.entry(for: decision.id) {
+                    VStack(alignment: .leading, spacing: 7) {
+                        let title = (decision.action == .add ? "Добавить: " : decision.action == .remove ? "Убрать из списка: " : "Оставить в кандидатах: ") + entry.name
+                        if decision.action == .keep { Text(title).font(.callout.weight(.medium)) }
+                        else {
+                            Toggle(title, isOn: Binding(get: { model.selectedReviewIDs.contains(decision.id) }, set: { selected in
+                                if selected { model.selectedReviewIDs.insert(decision.id) }
+                                else { model.selectedReviewIDs.remove(decision.id) }
+                            })).font(.callout.weight(.medium))
+                        }
+                        Text("\(entry.path) · \(SizeFormat.string(entry.allocatedBytes))").font(.caption.monospaced()).textSelection(.enabled)
+                        Text(decision.reason).font(.callout)
+                        Text(decision.caution).font(.caption).foregroundStyle(.secondary)
+                    }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+                }
+            }
+            Text("Убрать из списка означает исключить кандидата, файлы останутся на месте. Добавление кандидата тоже не удаляет его.")
+                .font(.caption).foregroundStyle(.secondary)
+            Text("Отдельная кнопка удаления включает «Оставить в кандидатах» и отмеченные «Добавить». Сначала откроется список путей для подтверждения переноса в Корзину.")
+                .font(.caption).foregroundStyle(.secondary)
+            Button("Применить изменения (\(model.selectedReviewIDs.count))") { model.applyCandidateReview() }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.selectedReviewIDs.isEmpty || model.workLocked || model.analyzing)
+            aiRecommendedRemovalAction
+        }
+    }
+
+    private var aiRecommendedRemovalAction: some View {
+        let candidates = model.aiRecommendedCandidates
+        return HStack(spacing: 12) {
+            Button { model.requestAIRecommendedRemoval() } label: {
+                Label("Удалить рекомендованное ИИ… (\(candidates.count))", systemImage: "trash")
+            }
+            .disabled(candidates.isEmpty || model.workLocked || model.analyzing)
+            .help("Открыть подтверждение переноса в Корзину только явно рекомендованных ИИ объектов. Поиск не ограничивает список.")
+            Text(candidates.isEmpty ? "Появятся после ИИ-пересмотра" : "\(SizeFormat.string(candidates.reduce(0) { $0 + $1.entry.allocatedBytes })) · с подтверждением путей")
+                .font(.caption).foregroundStyle(.secondary)
+            Spacer()
         }
     }
 }

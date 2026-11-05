@@ -16,6 +16,8 @@ struct AgentSettingsView: View {
                 Text("Подключение ИИ").font(.system(size: 23, weight: .semibold, design: .rounded))
                 Spacer()
                 Button { dismiss() } label: { Image(systemName: "xmark") }.buttonStyle(.plain).foregroundStyle(.secondary)
+                    .help("Закрыть настройки без сохранения")
+                    .accessibilityLabel("Закрыть настройки без сохранения")
             }
             Picker("Способ подключения", selection: $draft.mode) {
                 Text("Codex CLI").tag(AgentMode.codex)

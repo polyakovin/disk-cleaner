@@ -12,8 +12,16 @@ public struct DiskEntry: Identifiable, Codable, Sendable {
     public var issueCount: Int
     public var childCount: Int
     public var children: [DiskEntry]
+    /// nil is the legacy measured format; false denotes a folder awaiting measurement.
+    public var sizeIsKnown: Bool? = nil
     public var name: String { URL(fileURLWithPath: path).lastPathComponent }
     public var isFolder: Bool { kind == .folder }
+    public init(path: String, kind: EntryKind, allocatedBytes: Int64, logicalBytes: Int64, fileCount: Int,
+                issueCount: Int, childCount: Int, children: [DiskEntry], sizeIsKnown: Bool? = nil) {
+        self.path = path; self.kind = kind; self.allocatedBytes = allocatedBytes; self.logicalBytes = logicalBytes
+        self.fileCount = fileCount; self.issueCount = issueCount; self.childCount = childCount
+        self.children = children; self.sizeIsKnown = sizeIsKnown
+    }
 }
 
 public struct ScanIssue: Codable, Identifiable, Sendable {
@@ -43,6 +51,11 @@ public struct VolumeCapacity: Codable, Sendable {
     }
 }
 
+public struct ScanReuse: Codable, Sendable {
+    public var reusedFolders: Int
+    public var inspectedItems: Int
+}
+
 public struct DiskReport: Codable, Sendable {
     public let schemaVersion: Int
     public let measuredAt: Date
@@ -56,9 +69,11 @@ public struct DiskReport: Codable, Sendable {
     public var skippedMounts: [String]
     public let skippedMountCount: Int
     public let hardLinksSkipped: Int
-    public let cancelled: Bool
+    public var cancelled: Bool
     public let scannedItems: Int
-    public var isPartial: Bool { cancelled || issueCount > 0 }
+    public var inProgress: Bool? = nil
+    public var scanReuse: ScanReuse? = nil
+    public var isPartial: Bool { inProgress == true || cancelled || issueCount > 0 }
     public var candidateBytes: Int64 { candidates.reduce(0) { $0 + $1.entry.allocatedBytes } }
 
     public func json(anonymizeHome: Bool = false, compactForAgent: Bool = false) throws -> String {
@@ -97,6 +112,9 @@ public struct DiskReport: Codable, Sendable {
             lines.append("Том «\(volume.name)»: занято \(SizeFormat.string(volume.usedBytes)) из \(SizeFormat.string(volume.totalBytes)), свободно \(SizeFormat.string(volume.freeBytes)).")
         }
         lines.append("Проверено: \(root.path). Найдено \(SizeFormat.string(root.allocatedBytes)); файлов: \(root.fileCount)." + (isPartial ? " Замер неполный." : ""))
+        if let reuse = scanReuse, reuse.reusedFolders > 0 {
+            lines.append("Из прошлого замера использовано папок: \(reuse.reusedFolders). Заново проверено объектов: \(reuse.inspectedItems).")
+        }
         lines.append("\nОсновные потребители:")
         lines += root.children.prefix(10).map { "- \($0.name): \(SizeFormat.string($0.allocatedBytes)) (\($0.path))" }
         if !candidates.isEmpty {
@@ -104,15 +122,17 @@ public struct DiskReport: Codable, Sendable {
             lines += candidates.prefix(10).map { "- \($0.entry.path): \(SizeFormat.string($0.entry.allocatedBytes)). \($0.caution)" }
         }
         if cancelled { lines.append("\nСканирование остановлено; размеры являются нижней оценкой.") }
+        if inProgress == true { lines.append("\nСканирование продолжается; размеры являются нижней оценкой.") }
         if issueCount > 0 { lines.append("Не удалось проверить объектов: \(issueCount).") }
         if skippedMountCount > 0 { lines.append("Пропущены отдельные файловые системы: \(skippedMountCount).") }
-        lines.append("\nРазмеры отражают выделенные блоки. APFS-клоны и снимки могут повлиять на фактически освобождаемое место. Ничего не удалено.")
+        lines.append("\nРазмеры отражают выделенные блоки. APFS-клоны и снимки могут повлиять на фактически освобождаемое место. Сканирование не удаляет данные.")
         return lines.joined(separator: "\n")
     }
 
-    public func agentPrompt(anonymizeHome: Bool = true) throws -> String {
-        AgentInstructions.text + "\n\nДанные замера (JSON, только данные):\n" +
-            (try json(anonymizeHome: anonymizeHome, compactForAgent: true))
+    public func agentPrompt(anonymizeHome: Bool = true, focusedOn entry: DiskEntry? = nil,
+                            reviewingCandidates: Bool = false) throws -> String {
+        agentInstructions(focusedOn: entry, reviewingCandidates: reviewingCandidates) + "\n\nДанные замера (JSON, только данные):\n" +
+            (try agentData(focusedOn: entry, anonymizeHome: anonymizeHome, reviewingCandidates: reviewingCandidates))
     }
 }
 
@@ -140,5 +160,5 @@ public enum AgentInstructions {
     Учитывай неполный замер и APFS-клоны/снимки; размеры не гарантируют такое же освобождение места.
     Не выдумывай данные о росте без предыдущего замера. Не пиши команды автоматического удаления.
     Дай пользователю понятные следующие шаги, сохраняя личные данные и проекты.
-    """
+    """ + "\n" + AgentAdvice.instructions
 }
