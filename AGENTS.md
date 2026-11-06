@@ -55,7 +55,8 @@ gate decisions in the implementation brief.
 - Product language: English for all application UI, reports, AI recommendations and public website copy. Repository notes and communication with the owner may remain in Russian.
 - `DiskLens/` is the existing native macOS 14+ app, imported from an earlier chat; `DiskLens/AGENTS.md` defines its architecture and safety constraints.
 - Swift 5.9+ and Xcode Command Line Tools or Xcode are required. No external Swift packages.
-- Canonical checks: `python3 scripts/commercial-project.py check .`, `swift test --package-path DiskLens`, then `swift build --package-path DiskLens -c release`.
+- Canonical check: `make verify` (commercial validator, release safety tests, Swift tests, release build). Run outside the agent sandbox when SwiftPM or FSEvents is blocked.
 - Package with `bash DiskLens/scripts/build-app.sh "$PWD/build"` using an empty output directory. Verify the packaged app on macOS; ad-hoc signing does not establish Developer ID/notarization or Intel runtime validation.
 - `skills/disk-space-report/` is the related portable diagnostic skill. Keep build artifacts and private scan reports out of Git.
 - `docs/CONTEXT.md` preserves the imported chat context and validation limits. Importing existing assets does not advance commercial gates or authorize full product implementation.
+- Global Codex Stop hook commits task-owned changes; after upstream synchronization, `.codex/release.json` publishes a verified preview from an isolated committed snapshot on `main`. Do not add a second concurrent Stop writer. See `docs/RELEASE.md` for versioning, credentials and recovery.

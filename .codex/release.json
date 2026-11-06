@@ -1,0 +1,5 @@
+{
+  "branch": "main",
+  "command": ["python3", "scripts/release.py"],
+  "timeout": 1100
+}
