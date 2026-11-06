@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
@@ -110,18 +111,46 @@ class ReleaseTests(unittest.TestCase):
         api.release["assets"] = [{"name": name, "size": 1, "state": "uploaded"} for name in
                                  ("DiskManage-0.2.0-macos-universal.zip", "RELEASE.json", "SHA256SUMS.txt")]
         with tempfile.TemporaryDirectory() as temporary:
+            snapshot = Path(temporary) / "snapshot"
+            info = snapshot / "DiskLens/assets/Info.plist"
+            info.parent.mkdir(parents=True)
+            info.write_bytes((release.ROOT / "DiskLens/assets/Info.plist").read_bytes())
             with (patch.dict(os.environ, {"CODEX_RELEASE_SOURCE_REPO": temporary,
                                           "CODEX_RELEASE_COMMIT": COMMIT}),
+                  patch.object(release, "ROOT", snapshot),
                   patch.object(sys, "argv", ["release.py"]),
                   patch.object(release, "resolve_repo", return_value="owner/repo"),
                   patch.object(release, "resolve_token", return_value=("fixture", "test")),
                   patch.object(release, "GitHub", return_value=api),
                   patch.object(release, "pages", return_value=[api.release]),
+                  patch.object(release, "run_in_project_build", return_value=None),
                   patch.object(release, "assert_source"),
                   patch.object(release, "build") as build):
                 self.assertEqual(release.main(), 0)
                 build.assert_not_called()
         self.assertFalse(any(method != "GET" for method, _ in api.calls))
+
+    def test_relocation_copies_only_the_committed_snapshot_and_cleans_it_up(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "working-tree"
+            source.mkdir()
+            (source / "private.local").write_text("must not be copied")
+            snapshot = root / "committed-snapshot"
+            (snapshot / "scripts").mkdir(parents=True)
+            (snapshot / "scripts/release.py").write_text("committed release code")
+
+            def worker(args, cwd, timeout):
+                self.assertTrue(cwd.is_relative_to(source / "build"))
+                self.assertEqual(Path(args[1]).read_text(), "committed release code")
+                self.assertFalse((cwd / "private.local").exists())
+                return subprocess.CompletedProcess(args, 0)
+
+            with (patch.object(release, "ROOT", snapshot),
+                  patch.object(release.subprocess, "run", side_effect=worker)):
+                self.assertEqual(release.run_in_project_build(source), 0)
+            self.assertEqual(list((source / "build").iterdir()), [])
+            self.assertTrue((source / "private.local").exists())
 
     def test_incomplete_assets_do_not_pass_release_validation(self):
         with self.assertRaisesRegex(RuntimeError, "missing or incomplete"):

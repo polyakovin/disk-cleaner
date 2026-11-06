@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import plistlib
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,20 @@ from github_release import ApiError, GitHub, resolve_repo, resolve_token
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION_PATTERN = re.compile(r"v?(\d+)\.(\d+)\.(\d+)")
+
+
+def run_in_project_build(source: Path) -> int | None:
+    # /tmp and macOS's per-user temp folder can be excluded from persistent FSEvents.
+    # Copy the hook's committed archive, never the working tree, onto the project volume.
+    build_root = source / "build"
+    if ROOT.is_relative_to(build_root):
+        return None
+    build_root.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="release-source-", dir=build_root) as temporary:
+        snapshot = Path(temporary) / "source"
+        shutil.copytree(ROOT, snapshot)
+        return subprocess.run([sys.executable, str(snapshot / "scripts/release.py")],
+                              cwd=snapshot, timeout=1050).returncode
 
 
 def run(*args: str, cwd: Path = ROOT) -> str:
@@ -233,8 +248,13 @@ def main() -> int:
     try:
         source = Path(os.environ.get("CODEX_RELEASE_SOURCE_REPO", ROOT)).resolve()
         commit = os.environ.get("CODEX_RELEASE_COMMIT", "")
-        if not args.check and (not re.fullmatch(r"[0-9a-f]{40}", commit) or source == ROOT):
+        if not args.check and (not re.fullmatch(r"[0-9a-f]{40}", commit)
+                               or source == ROOT or (ROOT / ".git").exists()):
             raise RuntimeError("Publication requires the global Stop hook's isolated committed snapshot")
+        if not args.check:
+            relocated = run_in_project_build(source)
+            if relocated is not None:
+                return relocated
         previous = Path.cwd()
         try:
             os.chdir(source)
