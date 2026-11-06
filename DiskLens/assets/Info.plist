@@ -4,6 +4,8 @@
 <dict>
     <key>CFBundleName</key><string>Disk Manage</string>
     <key>CFBundleDisplayName</key><string>Disk Manage</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key><array><string>en</string></array>
     <key>CFBundleIdentifier</key><string>com.polyakovin.DiskLens</string>
     <key>CFBundleExecutable</key><string>DiskLens</string>
     <key>CFBundlePackageType</key><string>APPL</string>

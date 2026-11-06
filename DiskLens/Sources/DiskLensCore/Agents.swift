@@ -42,10 +42,10 @@ public enum APIAgent {
         guard let url = URL(string: settings.endpoint.trimmingCharacters(in: .whitespacesAndNewlines)),
               let host = url.host, url.user == nil, url.password == nil, url.fragment == nil,
               url.scheme == "https" || (url.scheme == "http" && ["localhost", "127.0.0.1", "[::1]", "::1"].contains(host)) else {
-            throw AgentFailure.message("Укажите HTTPS-адрес API или HTTP-адрес localhost.")
+            throw AgentFailure.message("Enter an HTTPS API URL or an HTTP localhost URL.")
         }
         guard !settings.model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw AgentFailure.message("Укажите модель в настройках подключения.")
+            throw AgentFailure.message("Enter a model in connection settings.")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -67,15 +67,15 @@ public enum APIAgent {
     }
 
     public static func parse(data: Data, statusCode: Int, format: APIFormat, key: String = "") throws -> String {
-        func safe(_ value: String) -> String { key.isEmpty ? value : value.replacingOccurrences(of: key, with: "[ключ скрыт]") }
-        guard data.count <= 2_000_000 else { throw AgentFailure.message("Ответ сервера слишком большой.") }
+        func safe(_ value: String) -> String { key.isEmpty ? value : value.replacingOccurrences(of: key, with: "[key hidden]") }
+        guard data.count <= 2_000_000 else { throw AgentFailure.message("The server response is too large.") }
         guard (200..<300).contains(statusCode) else {
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             let message = (json?["error"] as? [String: Any])?["message"] as? String
-            throw AgentFailure.message("API вернул HTTP \(statusCode). " + safe(String((message ?? "Проверьте адрес, модель и авторизацию.").prefix(400))))
+            throw AgentFailure.message("The API returned HTTP \(statusCode). " + safe(String((message ?? "Check the URL, model and authentication.").prefix(400))))
         }
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw AgentFailure.message("API вернул ответ в неизвестном формате.")
+            throw AgentFailure.message("The API returned an unrecognized response format.")
         }
         var text = ""
         if format == .responses {
@@ -85,18 +85,18 @@ public enum APIAgent {
                 .compactMap { $0["text"] as? String }.joined(separator: "\n\n")
             if text.isEmpty { text = object["output_text"] as? String ?? "" }
             if object["status"] as? String == "incomplete" && !text.isEmpty {
-                text += "\n\nОтвет модели прерван лимитом сервера; рекомендации могут быть неполными."
+                text += "\n\nThe model response was cut off by a server limit; recommendations may be incomplete."
             }
         } else {
             let choice = (object["choices"] as? [[String: Any]])?.first
             let message = choice?["message"] as? [String: Any]
             text = message?["content"] as? String ?? ""
             if choice?["finish_reason"] as? String == "length" && !text.isEmpty {
-                text += "\n\nОтвет модели прерван лимитом сервера."
+                text += "\n\nThe model response was cut off by a server limit."
             }
         }
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw AgentFailure.message("В ответе API нет текстовых рекомендаций. Проверьте формат API и модель.")
+            throw AgentFailure.message("The API response contains no text recommendations. Check the API format and model.")
         }
         return safe(text)
     }
@@ -111,7 +111,7 @@ public enum APIAgent {
         let session = URLSession(configuration: config, delegate: NoRedirects(), delegateQueue: nil)
         defer { session.invalidateAndCancel() }
         let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw AgentFailure.message("Нет HTTP-ответа от сервера.") }
+        guard let http = response as? HTTPURLResponse else { throw AgentFailure.message("No HTTP response from the server.") }
         return try parse(data: data, statusCode: http.statusCode, format: settings.format, key: key)
     }
 }
@@ -128,7 +128,7 @@ private final class OutputBuffer: @unchecked Sendable {
     }
     func text() -> String {
         lock.lock(); defer { lock.unlock() }
-        return String(decoding: data, as: UTF8.self) + (truncated ? "\n[Ответ сокращён до 1 МБ]" : "")
+        return String(decoding: data, as: UTF8.self) + (truncated ? "\n[Response truncated to 1 MB]" : "")
     }
 }
 
@@ -150,14 +150,14 @@ public enum CommandAgent {
                            timeout: TimeInterval = 300) throws -> String {
         let executable = settings.executable.trimmingCharacters(in: .whitespacesAndNewlines)
         guard executable.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: executable) else {
-            throw AgentFailure.message("Выберите установленный исполняемый файл агента в настройках.")
+            throw AgentFailure.message("Choose an installed agent executable in settings.")
         }
         let arguments: [String]
         if settings.mode == .codex { arguments = AgentSettings.codexArguments }
         else {
             guard let data = settings.argumentsJSON.data(using: .utf8),
                   let parsed = try? JSONDecoder().decode([String].self, from: data) else {
-                throw AgentFailure.message("Аргументы должны быть JSON-массивом строк, например [\"--print\"].")
+                throw AgentFailure.message("Arguments must be a JSON array of strings, for example [\"--print\"].")
             }
             arguments = parsed
         }
@@ -208,13 +208,13 @@ public enum CommandAgent {
         let drained = readers.wait(timeout: .now() + 2) == .success
         try? stdout.fileHandleForReading.close(); try? stderr.fileHandleForReading.close()
         if cancellation.isCancelled { throw CancellationError() }
-        if timedOut { throw AgentFailure.message("Агент не ответил за отведённое время. Проверьте подключение или повторите запрос.") }
-        guard drained else { throw AgentFailure.message("Агент завершился, но его дочерний процесс оставил поток открытым.") }
+        if timedOut { throw AgentFailure.message("The agent timed out. Check the connection or try again.") }
+        guard drained else { throw AgentFailure.message("The agent exited, but a child process left the stream open.") }
         guard process.terminationStatus == 0 else {
-            throw AgentFailure.message("Агент завершился с кодом \(process.terminationStatus). " + String(errors.text().suffix(1600)))
+            throw AgentFailure.message("The agent exited with code \(process.terminationStatus). " + String(errors.text().suffix(1600)))
         }
         let result = output.text().trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !result.isEmpty else { throw AgentFailure.message("Агент не вернул текст в stdout. Проверьте аргументы команды.") }
+        guard !result.isEmpty else { throw AgentFailure.message("The agent returned no text on stdout. Check the command arguments.") }
         return result
     }
 }

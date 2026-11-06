@@ -19,6 +19,7 @@ struct DiskLensApp: App {
     var body: some Scene {
         Window("Disk Manage", id: "main") {
             MainView(model: model)
+                .environment(\.locale, Locale(identifier: "en_US"))
                 .frame(minWidth: 980, minHeight: 640)
                 .onDisappear { model.cancelWork() }
                 .onAppear {
@@ -32,24 +33,24 @@ struct DiskLensApp: App {
         .defaultSize(width: 1180, height: 780)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("Выбрать папку…") { model.chooseFolder() }.keyboardShortcut("o").disabled(model.workLocked)
-                Button("Сканировать") { model.scan() }.keyboardShortcut("r").disabled(model.workLocked)
-                Button("Пересканировать полностью") { model.scan(forceFull: true) }
+                Button("Choose Folder…") { model.chooseFolder() }.keyboardShortcut("o").disabled(model.workLocked)
+                Button("Scan") { model.scan() }.keyboardShortcut("r").disabled(model.workLocked)
+                Button("Rescan Everything") { model.scan(forceFull: true) }
                     .keyboardShortcut("r", modifiers: [.command, .shift]).disabled(model.workLocked)
             }
             CommandGroup(after: .pasteboard) {
-                Button("Переместить в Корзину…") {
+                Button("Move to Trash…") {
                     if let selected = model.selected { model.requestRemoval(selected) }
                 }.keyboardShortcut(.delete, modifiers: .command)
                     .disabled(model.selected == nil || model.interactionLocked)
-                Button("Удалить безвозвратно…") {
+                Button("Delete Permanently…") {
                     if let selected = model.selected { model.requestRemoval(selected, mode: .permanent) }
                 }.keyboardShortcut(.delete, modifiers: [.command, .option])
                     .disabled(model.selected == nil || model.interactionLocked)
             }
             CommandGroup(replacing: .appSettings) {
-                Button("Доступ к диску…") { model.showingDiskAccess = true }.disabled(model.interactionLocked)
-                Button("Подключение ИИ…") { model.showingSettings = true }.keyboardShortcut(",")
+                Button("Disk Access…") { model.showingDiskAccess = true }.disabled(model.interactionLocked)
+                Button("AI Connection…") { model.showingSettings = true }.keyboardShortcut(",")
             }
         }
     }

@@ -52,6 +52,7 @@ gate decisions in the implementation brief.
 
 ## Imported Disk Manage application
 
+- Product language: English for all application UI, reports, AI recommendations and public website copy. Repository notes and communication with the owner may remain in Russian.
 - `DiskLens/` is the existing native macOS 14+ app, imported from an earlier chat; `DiskLens/AGENTS.md` defines its architecture and safety constraints.
 - Swift 5.9+ and Xcode Command Line Tools or Xcode are required. No external Swift packages.
 - Canonical checks: `python3 scripts/commercial-project.py check .`, `swift test --package-path DiskLens`, then `swift build --package-path DiskLens -c release`.

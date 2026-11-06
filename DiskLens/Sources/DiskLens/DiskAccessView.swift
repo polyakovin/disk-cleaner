@@ -12,36 +12,36 @@ struct DiskAccessView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Label("Один доступ к папкам", systemImage: "lock.open")
+            Label("Folder Access in One Place", systemImage: "lock.open")
                 .font(.title2.weight(.semibold))
-            Text("Включите для Disk Manage «Полный доступ к диску», чтобы macOS не спрашивала отдельно о «Загрузках», «Документах» и «Рабочем столе».")
+            Text("Enable Full Disk Access for Disk Manage so macOS does not ask separately about Downloads, Documents and Desktop.")
             VStack(alignment: .leading, spacing: 12) {
-                Text("1. Откройте системные настройки доступа кнопкой ниже.")
-                Text("2. Включите Disk Manage. Если его нет в списке, нажмите «+» и выберите эту копию приложения или перетащите её из Finder.")
-                Text("3. Если macOS предложит перезапустить Disk Manage, сделайте это. Затем повторите сканирование.")
+                Text("1. Open the system access settings using the button below.")
+                Text("2. Enable Disk Manage. If it is missing, click “+” and select this copy of the app, or drag it from Finder.")
+                Text("3. If macOS asks you to restart Disk Manage, do so. Then scan again.")
             }.font(.callout)
             if let appURL {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Эта копия Disk Manage").font(.caption).foregroundStyle(.secondary)
+                    Text("This Copy of Disk Manage").font(.caption).foregroundStyle(.secondary)
                     Text(appURL.path).font(.caption.monospaced()).textSelection(.enabled)
-                    Button("Показать приложение в Finder") {
+                    Button("Show App in Finder") {
                         NSWorkspace.shared.activateFileViewerSelecting([appURL])
                     }
                 }
             } else {
-                Text("Для настройки доступа запустите собранное приложение Disk Manage.app.")
+                Text("Launch the packaged Disk Manage.app to configure access.")
                     .font(.callout).foregroundStyle(.secondary)
             }
-            Text("Доступ включает защищённые данные других приложений. Выбор хранит macOS; его можно отозвать в тех же настройках. После замены сборки система может запросить разрешение снова.")
+            Text("This access includes protected data from other apps. macOS stores your choice; you can revoke it in the same settings. Replacing the build may trigger another permission request.")
                 .font(.caption).foregroundStyle(.secondary)
             if openingFailed {
-                Text("Откройте «Системные настройки → Конфиденциальность и безопасность → Полный доступ к диску» вручную.")
+                Text("Open System Settings → Privacy & Security → Full Disk Access manually.")
                     .font(.callout).foregroundStyle(.orange)
             }
             HStack {
-                Button("Закрыть") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Close") { dismiss() }.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Открыть настройки доступа") {
+                Button("Open Access Settings") {
                     let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
                     openingFailed = !NSWorkspace.shared.open(url)
                 }.buttonStyle(.borderedProminent)

@@ -34,7 +34,7 @@ public struct ScannerConfiguration: Sendable {
 public enum ScanFailure: LocalizedError {
     case invalidRoot(String)
     public var errorDescription: String? {
-        switch self { case .invalidRoot(let p): return "Не удалось открыть папку \(p). Проверьте путь и доступ." }
+        switch self { case .invalidRoot(let p): return "Could not open folder \(p). Check the path and permissions." }
     }
 }
 
@@ -252,7 +252,7 @@ public final class DiskScanner {
         guard let reason = cacheReason(entry.path) else { return nil }
         var compact = entry; compact.children = []
         return CleanupCandidate(entry: compact, reason: reason,
-                                caution: "Проверьте содержимое и закройте приложение. Кэш может потребоваться скачать или создать заново.")
+                                caution: "Check the contents and quit the app. Caches may need to be downloaded or rebuilt.")
     }
 
     private func publish(_ path: String, root finalRoot: DiskEntry? = nil, force: Bool = false) {
@@ -487,7 +487,7 @@ public final class DiskScanner {
         let suffixes = ["/Library/Caches", "/.npm/_cacache", "/.npm/_npx", "/.gradle/caches",
                         "/Library/Developer/Xcode/DerivedData", "/CapCut/User Data/Cache",
                         "/.cache/uv", "/.cache/pip"]
-        return suffixes.contains(where: path.hasSuffix) ? "Известный каталог кэша" : nil
+        return suffixes.contains(where: path.hasSuffix) ? "Known cache directory" : nil
     }
 
     public static func disjointCandidates(_ input: [CleanupCandidate]) -> [CleanupCandidate] {

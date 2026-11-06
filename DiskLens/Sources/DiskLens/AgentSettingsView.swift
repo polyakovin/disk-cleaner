@@ -13,44 +13,44 @@ struct AgentSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text("Подключение ИИ").font(.system(size: 23, weight: .semibold, design: .rounded))
+                Text("AI Connection").font(.system(size: 23, weight: .semibold, design: .rounded))
                 Spacer()
                 Button { dismiss() } label: { Image(systemName: "xmark") }.buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help("Закрыть настройки без сохранения")
-                    .accessibilityLabel("Закрыть настройки без сохранения")
+                    .help("Close settings without saving")
+                    .accessibilityLabel("Close settings without saving")
             }
-            Picker("Способ подключения", selection: $draft.mode) {
+            Picker("Connection Method", selection: $draft.mode) {
                 Text("Codex CLI").tag(AgentMode.codex)
-                Text("Команда").tag(AgentMode.command)
+                Text("Command").tag(AgentMode.command)
                 Text("API").tag(AgentMode.api)
             }.pickerStyle(.segmented)
             if draft.mode != .api {
-                field("Исполняемый файл") {
+                field("Executable") {
                     HStack {
                         TextField("/absolute/path/to/agent", text: $draft.executable).textFieldStyle(.roundedBorder)
-                        Button("Выбрать…") {
+                        Button("Choose…") {
                             let panel = NSOpenPanel(); panel.canChooseFiles = true; panel.canChooseDirectories = false
                             if panel.runModal() == .OK, let url = panel.url { draft.executable = url.path }
                         }
                     }
                 }
                 if draft.mode == .codex {
-                    Button("Найти установленный Codex") {
+                    Button("Find Installed Codex") {
                         if let path = AgentSettings.detectCodex() { draft.executable = path }
-                        else { error = "Codex CLI не найден. Выберите установленный CLI или используйте API." }
+                        else { error = "Codex CLI was not found. Choose an installed CLI or use the API." }
                     }
-                    Text("Используется авторизация установленного CLI. Режим только чтения, временная сессия; hooks и пользовательская конфигурация отключены.")
+                    Text("Uses the installed CLI's authentication in a temporary, read-only session. Hooks and user configuration are disabled.")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
-                    field("Аргументы как JSON-массив") {
+                    field("Arguments as a JSON Array") {
                         TextField("[\"--print\"]", text: $draft.argumentsJSON).textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced))
                     }
-                    Text("Запрос поступает в stdin, ответ читается из stdout. Команда запускается напрямую и использует собственную авторизацию и права.")
+                    Text("The request goes to stdin and the response is read from stdout. The command runs directly with its own authentication and permissions.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             } else {
-                field("Формат API") {
-                    Picker("Формат", selection: $draft.format) {
+                field("API Format") {
+                    Picker("Format", selection: $draft.format) {
                         Text("Responses").tag(APIFormat.responses)
                         Text("Chat Completions").tag(APIFormat.chatCompletions)
                     }.labelsHidden()
@@ -61,28 +61,28 @@ struct AgentSettingsView: View {
                         }
                     }
                 }
-                field("Полный URL сервера") {
+                field("Full Server URL") {
                     TextField("https://api.openai.com/v1/responses", text: $draft.endpoint).textFieldStyle(.roundedBorder)
                         .onChange(of: draft.endpoint) { _, endpoint in key = KeyStore.read(endpoint: endpoint) }
                 }
-                field("Модель") { TextField("Название модели вашего провайдера", text: $draft.model).textFieldStyle(.roundedBorder) }
-                field("API-ключ") { SecureField("При необходимости", text: $key).textFieldStyle(.roundedBorder) }
-                Text("Ключ сохраняется в Связке ключей для этого URL. Для локального сервера разрешён HTTP на localhost.")
+                field("Model") { TextField("Your provider's model name", text: $draft.model).textFieldStyle(.roundedBorder) }
+                field("API Key") { SecureField("Optional", text: $key).textFieldStyle(.roundedBorder) }
+                Text("The key is saved in Keychain for this URL. Local servers may use HTTP on localhost.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Divider()
-            Toggle("Заменять домашний префикс пути на ~ в запросе агенту", isOn: $draft.anonymizeHome).font(.callout)
-            Text("Названия папок и файлов остаются в отчёте. Их содержимое не читается и не отправляется.")
+            Toggle("Replace the home directory prefix with ~ in agent requests", isOn: $draft.anonymizeHome).font(.callout)
+            Text("Folder and file names remain in the report. Their contents are never read or sent.")
                 .font(.caption).foregroundStyle(.secondary)
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
             HStack {
                 Spacer()
-                Button("Отмена") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("Сохранить") {
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Save") {
                     do {
                         if draft.mode == .command {
                             guard let data = draft.argumentsJSON.data(using: .utf8), (try? JSONDecoder().decode([String].self, from: data)) != nil else {
-                                error = "Аргументы должны быть JSON-массивом строк."; return
+                                error = "Arguments must be a JSON array of strings."; return
                             }
                         }
                         try model.saveSettings(draft, key: key); dismiss()

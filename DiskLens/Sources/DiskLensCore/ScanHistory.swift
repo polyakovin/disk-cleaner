@@ -6,7 +6,7 @@ private final class ScanHistoryAccess: @unchecked Sendable {
 
 public enum ScanHistoryFailure: LocalizedError {
     case tooLarge
-    public var errorDescription: String? { "Отчёт превышает лимит локальной истории (32 МБ)." }
+    public var errorDescription: String? { "The report exceeds the local history limit (32 MB)." }
 }
 
 struct SavedScan: Codable {

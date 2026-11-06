@@ -5,16 +5,16 @@ import DiskLensCore
 enum FileRemovalMode: Equatable, Sendable {
     case trash, permanent
 
-    var confirmationTitle: String { self == .permanent ? "Удалить безвозвратно?" : "Переместить в Корзину?" }
-    var actionTitle: String { self == .permanent ? "Удалить безвозвратно" : "В Корзину" }
-    var progressTitle: String { self == .permanent ? "Безвозвратное удаление…" : "Перемещение в Корзину…" }
+    var confirmationTitle: String { self == .permanent ? "Delete Permanently?" : "Move to Trash?" }
+    var actionTitle: String { self == .permanent ? "Delete Permanently" : "Move to Trash" }
+    var progressTitle: String { self == .permanent ? "Deleting permanently…" : "Moving to Trash…" }
     func successMessage(name: String) -> String {
-        self == .permanent ? "Удалено безвозвратно: «\(name)»."
-            : "«\(name)» в Корзине. Место обычно освобождается после её очистки."
+        self == .permanent ? "Deleted permanently: “\(name)”."
+            : "“\(name)” is in the Trash. Space is usually freed after emptying it."
     }
     func failureMessage(name: String, reason: String) -> String {
-        self == .permanent ? "Не удалось полностью удалить «\(name)». Часть содержимого могла быть удалена. \(reason)"
-            : "Не удалось переместить «\(name)» в Корзину. \(reason)"
+        self == .permanent ? "Could not completely delete “\(name)”. Some contents may have been removed. \(reason)"
+            : "Could not move “\(name)” to Trash. \(reason)"
     }
 }
 
@@ -23,10 +23,10 @@ enum FileRemovalFailure: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .protectedPath: return "Корень замера, домашнюю папку, системные каталоги и Корзину нельзя удалить из Disk Manage."
-        case .outsideScan: return "Объект находится вне текущего замера. Просканируйте его папку заново."
-        case .changed: return "Объект или путь к нему изменился. Повторите сканирование и выберите объект заново."
-        case .unavailable(let reason): return "Не удалось проверить объект: \(reason)"
+        case .protectedPath: return "Disk Manage cannot remove the scan root, home folder, system directories or Trash."
+        case .outsideScan: return "This item is outside the current scan. Scan its folder again."
+        case .changed: return "The item or its path has changed. Scan again and select the item again."
+        case .unavailable(let reason): return "Could not verify the item: \(reason)"
         }
     }
 }

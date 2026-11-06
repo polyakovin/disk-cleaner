@@ -84,7 +84,7 @@ final class StartupHistoryTests: XCTestCase {
         let model = AppModel(scanHistory: history)
         XCTAssertNil(model.displayedReport)
         XCTAssertFalse(model.scanning)
-        XCTAssertEqual(model.message, "Не удалось открыть последний замер. Запустите новое сканирование.")
+        XCTAssertEqual(model.message, "Could not open the last scan. Start a new scan.")
         XCTAssertEqual(try Data(contentsOf: file), corrupt)
     }
 }

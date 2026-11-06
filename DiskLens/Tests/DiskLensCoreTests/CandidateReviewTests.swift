@@ -72,7 +72,7 @@ final class CandidateReviewTests: XCTestCase {
         let added = try review.applying(result, selectedIDs: ["entry-1"])
         XCTAssertEqual(added.count, 2)
         XCTAssertEqual(added.last?.id, review.entry(for: "entry-1")?.path)
-        XCTAssertTrue(added.last?.reason.hasPrefix("ИИ:") == true)
+        XCTAssertTrue(added.last?.reason.hasPrefix("AI:") == true)
         let removal = try review.parse(json("entry-0", action: "remove"))
         XCTAssertTrue(try review.applying(removal, selectedIDs: ["entry-0"]).isEmpty)
     }

@@ -14,7 +14,7 @@ struct CandidateRemovalRequest: Identifiable, Sendable {
     init(report: DiskReport, mode: FileRemovalMode, scope: Scope = .allCandidates) throws {
         guard !report.candidates.isEmpty,
               DiskScanner.disjointCandidates(report.candidates).count == report.candidates.count else {
-            throw AgentFailure.message("Список кандидатов пуст или содержит пересекающиеся пути. Повторите сканирование.")
+            throw AgentFailure.message("The candidate list is empty or contains overlapping paths. Scan again.")
         }
         var available: [FileRemovalRequest] = []
         var blocked: [UnavailableCandidate] = []

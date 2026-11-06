@@ -4,7 +4,7 @@ import Security
 import DiskLensCore
 
 enum Pane: String, CaseIterable, Identifiable {
-    case overview = "Файлы и папки", files = "Крупные файлы", candidates = "Кандидаты", assistant = "ИИ-помощник"
+    case overview = "Files and Folders", files = "Large Files", candidates = "Candidates", assistant = "AI Assistant"
     var id: Self { self }
     var icon: String {
         switch self { case .overview: return "chart.pie"; case .files: return "doc.text.magnifyingglass"
@@ -35,7 +35,7 @@ enum KeyStore {
             item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
             status = SecItemAdd(item as CFDictionary, nil)
         }
-        guard status == errSecSuccess else { throw AgentFailure.message("Не удалось сохранить ключ в Связке ключей (\(status)).") }
+        guard status == errSecSuccess else { throw AgentFailure.message("Could not save the key in Keychain (\(status)).") }
     }
 }
 
@@ -121,7 +121,7 @@ final class AppModel: ObservableObject {
                 report = saved
                 target = URL(fileURLWithPath: saved.root.path)
             }
-        } catch { message = "Не удалось открыть последний замер. Запустите новое сканирование." }
+        } catch { message = "Could not open the last scan. Start a new scan." }
         capacity = VolumeCapacity.read(at: target)
         automaticRefreshAvailable = treeStore?.hasContinuousHistory(target.standardizedFileURL.resolvingSymlinksInPath().path) == true
     }
@@ -168,12 +168,12 @@ final class AppModel: ObservableObject {
         return entries.first { $0.path == selection }
     }
     var targetName: String {
-        if target.path == FileManager.default.homeDirectoryForCurrentUser.path { return "Домашняя папка" }
-        if target.path == "/System/Volumes/Data" { return "Весь Mac" }
+        if target.path == FileManager.default.homeDirectoryForCurrentUser.path { return "Home Folder" }
+        if target.path == "/System/Volumes/Data" { return "Entire Mac" }
         return target.lastPathComponent
     }
     var agentName: String {
-        switch settings.mode { case .codex: return "Codex CLI"; case .command: return "Локальная команда"; case .api: return "API · " + settings.model }
+        switch settings.mode { case .codex: return "Codex CLI"; case .command: return "Local Command"; case .api: return "API · " + settings.model }
     }
     func setTarget(_ url: URL) {
         guard !workLocked else { return }
@@ -184,7 +184,7 @@ final class AppModel: ObservableObject {
         guard !interactionLocked else { return }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
-        panel.message = "Выберите папку или диск для анализа"
+        panel.message = "Choose a folder or disk to analyze"
         if panel.runModal() == .OK, let url = panel.url { openLocation(url) }
     }
     func scan(completionMessage: String? = nil, forceFull: Bool = false) {
@@ -225,7 +225,7 @@ final class AppModel: ObservableObject {
                     else { value = try scanner.scan(root) }
                     var warning: String?
                     do { try history.save(value, cache: scanner.scanCache, unlessCancelled: flag) }
-                    catch { warning = "Замер готов, но сохранить его для следующего запуска не удалось: \(error.localizedDescription)" }
+                    catch { warning = "The scan is complete, but could not be saved for the next launch: \(error.localizedDescription)" }
                     return .success((value, warning))
                 } catch { return .failure(error) }
             }.value
@@ -393,7 +393,7 @@ final class AppModel: ObservableObject {
                         if let tree { try tree.invalidate([request.entry.path]) }
                         else { try history.clear() }
                     }
-                    catch { warning = "Не удалось удалить старый сохранённый замер: \(error.localizedDescription)" }
+                    catch { warning = "Could not remove the previous saved scan: \(error.localizedDescription)" }
                 }
                 return (result, warning)
             }.value
@@ -405,7 +405,7 @@ final class AppModel: ObservableObject {
             case .failure(let error):
                 let failure = request.mode.failureMessage(name: request.entry.name, reason: error.localizedDescription)
                 if request.mode == .permanent {
-                    removalStatus = "Удаление не завершено. Проверяем, что осталось на диске."
+                    removalStatus = "Removal incomplete. Checking what remains on disk."
                     refreshAfterRemoval(root: request.scanRoot,
                                         completionMessage: [failure, warning].compactMap { $0 }.joined(separator: "\n"))
                 } else { message = failure }
@@ -431,7 +431,7 @@ final class AppModel: ObservableObject {
         guard !workLocked, !analyzing, var snapshot = report else { return }
         let recommended = aiRecommendedCandidates
         guard !recommended.isEmpty else {
-            message = "Нет выбранных рекомендаций ИИ для текущего замера. Повторите пересмотр кандидатов."
+            message = "No AI recommendations are selected for this scan. Review the candidates again."
             return
         }
         snapshot.candidates = recommended
@@ -464,7 +464,7 @@ final class AppModel: ObservableObject {
                             break
                         }
                     }
-                } catch { failure = "Ни один объект не удалён: \(error.localizedDescription)" }
+                } catch { failure = "No items were removed: \(error.localizedDescription)" }
                 let invalidated = completed > 0 || (attempted && batch.mode == .permanent)
                 var warning: String?
                 if invalidated {
@@ -472,14 +472,14 @@ final class AppModel: ObservableObject {
                         if let tree { try tree.invalidate(batch.requests.map { $0.entry.path }) }
                         else { try history.clear() }
                     }
-                    catch { warning = "Не удалось удалить старый сохранённый замер: \(error.localizedDescription)" }
+                    catch { warning = "Could not remove the previous saved scan: \(error.localizedDescription)" }
                 }
                 return (completed, failure, warning, invalidated)
             }.value
             removing = false; removalMode = nil
-            let status = batch.mode == .permanent ? "Удалено безвозвратно" : "Перемещено в Корзину"
-            let skipped = batch.unavailable.isEmpty ? "" : " Пропущено недоступных: \(batch.unavailable.count)."
-            removalStatus = "\(status): \(completed) из \(batch.requests.count)." + skipped
+            let status = batch.mode == .permanent ? "Deleted permanently" : "Moved to Trash"
+            let skipped = batch.unavailable.isEmpty ? "" : " Skipped unavailable items: \(batch.unavailable.count)."
+            removalStatus = "\(status): \(completed) of \(batch.requests.count)." + skipped
             let details = [failure, warning].compactMap { $0 }.joined(separator: "\n")
             if invalidated {
                 refreshAfterRemoval(root: batch.scanRoot, completionMessage: details.isEmpty ? nil : details)
@@ -529,7 +529,7 @@ final class AppModel: ObservableObject {
                 analysisReport = details
                 analysisEntry = details.root
             case .failure(let error):
-                message = "Не удалось уточнить состав папки: \(error.localizedDescription). Доступен запрос по исходному замеру."
+                message = "Could not check the folder's contents: \(error.localizedDescription). You can still send a request using the original scan."
             }
         }
     }
@@ -547,7 +547,7 @@ final class AppModel: ObservableObject {
         guard !workLocked, !analyzing, reviewingCandidates, let snapshot = analysisReport,
               var current = report, let result = candidateReviewResult else { return }
         guard sameScan(current, snapshot) else {
-            message = "Замер изменился. Повторите ИИ-пересмотр для текущего списка."
+            message = "The scan has changed. Run an AI review of the current list again."
             return
         }
         do {
@@ -610,7 +610,7 @@ final class AppModel: ObservableObject {
         guard let report, !workLocked else { return }
         let panel = NSSavePanel()
         panel.nameFieldStringValue = json ? "Disk-Manage-report.json" : "Disk-Manage-report.txt"
-        panel.message = "Отчёт содержит пути и размеры, без содержимого файлов"
+        panel.message = "The report contains paths and sizes, without file contents"
         if panel.runModal() == .OK, let url = panel.url {
             do { try (json ? report.json() : report.text()).write(to: url, atomically: true, encoding: .utf8) }
             catch { message = error.localizedDescription }

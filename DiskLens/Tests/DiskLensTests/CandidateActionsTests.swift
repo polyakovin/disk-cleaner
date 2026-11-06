@@ -61,7 +61,7 @@ final class CandidateActionsTests: XCTestCase {
         XCTAssertEqual(model.report?.root.fileCount, 1)
         XCTAssertEqual(try history.load()?.root.fileCount, 1)
         XCTAssertTrue(model.recommendations.isEmpty)
-        XCTAssertEqual(model.removalStatus, "Удалено безвозвратно: 3 из 3.")
+        XCTAssertEqual(model.removalStatus, "Deleted permanently: 3 of 3.")
         XCTAssertNil(model.message)
     }
 
@@ -75,8 +75,8 @@ final class CandidateActionsTests: XCTestCase {
         model.confirmCandidateRemoval()
         try await wait(model)
         XCTAssertTrue(exists("first") && exists("second") && exists("third"))
-        XCTAssertEqual(model.removalStatus, "Удалено безвозвратно: 0 из 3.")
-        XCTAssertTrue(model.message?.contains("Ни один объект") == true)
+        XCTAssertEqual(model.removalStatus, "Deleted permanently: 0 of 3.")
+        XCTAssertTrue(model.message?.contains("No items were removed") == true)
     }
 
     @MainActor
@@ -92,7 +92,7 @@ final class CandidateActionsTests: XCTestCase {
         XCTAssertFalse(exists("first"))
         XCTAssertTrue(exists("second") && exists("third") && exists("keep"))
         XCTAssertEqual(model.report?.root.fileCount, 3)
-        XCTAssertEqual(model.removalStatus, "Удалено безвозвратно: 1 из 3.")
+        XCTAssertEqual(model.removalStatus, "Deleted permanently: 1 of 3.")
         XCTAssertTrue(model.message?.contains("second") == true)
     }
 
@@ -137,7 +137,7 @@ final class CandidateActionsTests: XCTestCase {
         try await wait(model)
         XCTAssertFalse(exists("first") || exists("third"))
         XCTAssertTrue(exists("keep"))
-        XCTAssertTrue(model.removalStatus?.contains("Пропущено недоступных: 1") == true)
+        XCTAssertTrue(model.removalStatus?.contains("Skipped unavailable items: 1") == true)
     }
 
     @MainActor
@@ -158,7 +158,7 @@ final class CandidateActionsTests: XCTestCase {
         XCTAssertFalse(exists("first"))
         XCTAssertTrue(exists("second") && exists("third") && exists("keep"))
         XCTAssertEqual(try Data(contentsOf: second), Data("replacement".utf8))
-        XCTAssertEqual(model.removalStatus, "Удалено безвозвратно: 1 из 3.")
+        XCTAssertEqual(model.removalStatus, "Deleted permanently: 1 of 3.")
         XCTAssertNotNil(model.message)
     }
 
@@ -229,6 +229,6 @@ final class CandidateActionsTests: XCTestCase {
         model.report = try fixture()
         model.applyCandidateReview()
         XCTAssertEqual(model.report?.candidates.count, 3)
-        XCTAssertTrue(model.message?.contains("Замер изменился") == true)
+        XCTAssertTrue(model.message?.contains("The scan has changed") == true)
     }
 }

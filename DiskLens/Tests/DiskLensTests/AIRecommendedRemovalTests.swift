@@ -109,7 +109,7 @@ final class AIRecommendedRemovalTests: XCTestCase {
         XCTAssertEqual(Set(try FileManager.default.contentsOfDirectory(atPath: root.path)), ["excluded", "unmentioned"])
         XCTAssertEqual(Set(try FileManager.default.contentsOfDirectory(atPath: trash.path)), ["approved", "additional"])
         XCTAssertEqual(model.report?.root.fileCount, 2)
-        XCTAssertEqual(model.removalStatus, "Перемещено в Корзину: 2 из 2.")
+        XCTAssertEqual(model.removalStatus, "Moved to Trash: 2 of 2.")
         XCTAssertTrue(model.aiRecommendedCandidates.isEmpty)
         XCTAssertNil(model.message)
     }

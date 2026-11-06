@@ -1,6 +1,7 @@
 # Disk Manage
 
 - Native macOS 14+ application. Swift Package Manager, Swift 5.9+; no external dependencies.
+- All user-facing UI, errors, exported reports and AI instructions/recommendations use English, including on a non-English macOS system.
 - `DiskLensCore` contains the POSIX metadata scanner, report generation and agent transports. It must not import SwiftUI or AppKit.
 - `DiskLens` contains UI, Finder integration and Keychain storage. `disklens-cli` exposes the scanner for terminal use and verification.
 - Scanner never reads file contents or follows symlinks; stays on the starting filesystem, counts hard links once, marks inaccessible and interrupted scans as partial. Store the complete metadata tree in private SQLite; keep reports and UI pages bounded in memory. Never export the full index to agents.

@@ -146,7 +146,7 @@ final class PermanentRemovalTests: XCTestCase {
         XCTAssertEqual(model.report?.root.path, root.path)
         XCTAssertEqual(model.report?.root.childCount, 0)
         XCTAssertEqual(try history.load()?.root.childCount, 0)
-        XCTAssertEqual(model.removalStatus, "Удалено безвозвратно: «folder».")
+        XCTAssertEqual(model.removalStatus, "Deleted permanently: “folder”.")
         XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
     }
 
@@ -166,13 +166,13 @@ final class PermanentRemovalTests: XCTestCase {
         model.requestRemoval(entry(folder, kind: .folder), mode: .permanent)
         model.confirmRemoval()
         try await waitForWork(model)
-        XCTAssertTrue(model.message?.contains("Не удалось полностью удалить") == true)
-        XCTAssertTrue(model.message?.contains("Часть содержимого могла быть удалена") == true)
+        XCTAssertTrue(model.message?.contains("Could not completely delete") == true)
+        XCTAssertTrue(model.message?.contains("Some contents may have been removed") == true)
         XCTAssertEqual(model.report?.root.fileCount, 1)
         XCTAssertEqual(try history.load()?.root.fileCount, 1)
         XCTAssertTrue(model.recommendations.isEmpty)
         XCTAssertFalse(FileManager.default.fileExists(atPath: removed.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: retained.path))
-        XCTAssertTrue(model.removalStatus?.contains("Удаление не завершено") == true)
+        XCTAssertTrue(model.removalStatus?.contains("Removal incomplete") == true)
     }
 }

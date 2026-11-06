@@ -3,7 +3,7 @@ import Darwin
 import CSQLite
 
 public enum FileTreeOrder: String, CaseIterable, Sendable {
-    case sizeDescending = "Сначала крупные", sizeAscending = "Сначала маленькие", name = "По имени"
+    case sizeDescending = "Largest First", sizeAscending = "Smallest First", name = "By Name"
 }
 
 public struct FileTreePage: Sendable {
@@ -23,8 +23,8 @@ enum FileTreeFailure: LocalizedError {
     case database(String), obsolete
     var errorDescription: String? {
         switch self {
-        case .database(let reason): return "Не удалось обновить индекс файлов: \(reason)"
-        case .obsolete: return "Обновление индекса заменено новым сканированием."
+        case .database(let reason): return "Could not update the file index: \(reason)"
+        case .obsolete: return "The index update was superseded by a new scan."
         }
     }
 }
@@ -46,7 +46,7 @@ public final class FileTreeStore: @unchecked Sendable {
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
         let file = directory.appendingPathComponent("file-tree.sqlite")
         guard sqlite3_open_v2(file.path, &database, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else {
-            let reason = database.map { String(cString: sqlite3_errmsg($0)) } ?? "SQLite недоступен"
+            let reason = database.map { String(cString: sqlite3_errmsg($0)) } ?? "SQLite is unavailable"
             if let database { sqlite3_close(database) }; database = nil
             throw FileTreeFailure.database(reason)
         }

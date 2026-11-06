@@ -60,7 +60,7 @@ final class CoreTests: XCTestCase {
         let flag = CancellationFlag(); flag.cancel()
         let report = try DiskScanner(cancellation: flag).scan(temporary)
         XCTAssertTrue(report.cancelled); XCTAssertTrue(report.isPartial)
-        XCTAssertTrue(report.text().contains("Замер неполный"))
+        XCTAssertTrue(report.text().contains("Scan is incomplete"))
     }
 
     func testInaccessibleDirectoryIsNotReportedAsComplete() throws {
